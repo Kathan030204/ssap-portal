@@ -14,7 +14,7 @@ export function Login() {
   const [userRole, setUserRole] = useState(""); 
   
   // UI States
-  const [isResetMode, setIsResetMode] = useState(false); 
+  const [isResetMode, setRestMode] = useState(false); 
   const [loading, setLoading] = useState(false);
   
   // Form States
@@ -99,7 +99,7 @@ export function Login() {
 
       if (response.ok) {
         alert("Success! Password has been updated. You can now login.");
-        setIsResetMode(false);
+        setRestMode(false);
         setNewPassword("");
         setPassword(""); 
       } else {
@@ -200,7 +200,7 @@ export function Login() {
             <div className="flex justify-end">
               <button 
                 type="button"
-                onClick={() => setIsResetMode(true)}
+                onClick={() => setRestMode(true)}
                 className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
               >
                 Forgot Password?
@@ -247,7 +247,7 @@ export function Login() {
 
             <button 
               type="button"
-              onClick={() => setIsResetMode(false)}
+              onClick={() => setRestMode(false)}
               className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors py-2"
             >
               <FaArrowLeft size={10} /> Back to Sign In
