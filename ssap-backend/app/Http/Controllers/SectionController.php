@@ -14,15 +14,20 @@ class SectionController extends Controller
     }
 
     public function store(Request $request) {
+        // Validation: Added 'liquid' to the allowed extensions list
         $request->validate([
             'title'      => 'required|string|max:255',
             'creator_id' => 'required',
-            'zip_file'   => 'required|file|mimes:zip,rar,jpg,jpeg,png', 
+            'zip_file'   => 'required|file|extensions:zip,rar,jpg,jpeg,png,liquid', 
+        ], [
+            'zip_file.extensions' => 'The file must be a zip, rar, image, or a .liquid file.'
         ]);
 
         $path = null;
         if ($request->hasFile('zip_file')) {
             $file = $request->file('zip_file');
+            
+            // It is safer to use a unique name or slug, but keeping your original logic:
             $fileName = $file->getClientOriginalName();
             $path = $file->storeAs('sections', $fileName);
         }
@@ -62,11 +67,10 @@ class SectionController extends Controller
         // --- 1. HANDLE ADMIN TASK ASSIGNMENT ---
         if ($request->has('tester_id')) {
             $section->tester_id = $request->tester_id;
-            // If an admin assigns it, ensure status reflects it's ready for testing
             $section->current_status = $request->current_status ?? 'In Testing';
         }
 
-        // --- 2. HANDLE STATUS UPDATES (From Admin or Tester) ---
+        // --- 2. HANDLE STATUS UPDATES ---
         if ($request->has('current_status')) {
             $section->current_status = $request->current_status;
         }
@@ -74,14 +78,12 @@ class SectionController extends Controller
         $section->save();
 
         // --- 3. HANDLE ISSUE LOGGING (Tester Logic) ---
-        // If the status is being changed to 'Issue Logged', create a entry in the testing table
         if ($request->current_status === 'Issue Logged') {
-            // We use updateOrCreate or create to log the bug details
             Testing::create([
                 'section_id'  => $id,
-                'type'        => $request->type,        // From React payload
-                'severity'    => $request->severity,    // From React payload
-                'description' => $request->description, // From React payload
+                'type'        => $request->type,
+                'severity'    => $request->severity,
+                'description' => $request->description,
             ]);
         }
 
