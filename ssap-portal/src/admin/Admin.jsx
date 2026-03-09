@@ -72,7 +72,7 @@ export function Admin({ onLogout }) {
         return `${avgDays} Days`;
     };
 
-    const getLeaderboard = () => {
+    {/*const getLeaderboard = () => {
         const creators = accounts.filter(a => a.role === 'creator');
         const board = creators.map(user => {
             const cleanPasses = sections.filter(s =>
@@ -83,7 +83,7 @@ export function Admin({ onLogout }) {
             return { username: user.username, count: cleanPasses };
         });
         return board.sort((a, b) => b.count - a.count).slice(0, 5);
-    };
+    };*/}
 
     // --- Action Handlers ---
     const handleAssignTester = async (sectionId, testerId) => {
@@ -258,7 +258,7 @@ export function Admin({ onLogout }) {
                                             ) : <p className="text-slate-400 italic text-center py-8">No pending assignments.</p>}
                                         </div>
                                     </div>
-                                    <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                                    {/*<div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                                         <h3 className="font-black text-xl mb-6 flex items-center gap-2"><FaTrophy className="text-yellow-500" /> First-Try Masters</h3>
                                         <div className="space-y-4">
                                             {getLeaderboard().map((entry, index) => (
@@ -271,7 +271,7 @@ export function Admin({ onLogout }) {
                                                 </div>
                                             ))}
                                         </div>
-                                    </div>
+                                    </div>*/}
                                 </div>
                             </div>
                         )}
