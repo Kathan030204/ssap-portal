@@ -79,11 +79,13 @@ class SectionController extends Controller
 
         // --- 3. HANDLE ISSUE LOGGING (Tester Logic) ---
         if ($request->current_status === 'Issue Logged') {
+            // FIX: Added null-coalescing operators (??) to provide default values 
+            // if the request comes from the Admin Rollback button instead of the Tester form.
             Testing::create([
                 'section_id'  => $id,
-                'type'        => $request->type,
-                'severity'    => $request->severity,
-                'description' => $request->description,
+                'type'        => $request->type ?? 'Emergency Rollback', 
+                'severity'    => $request->severity ?? 'Critical',
+                'description' => $request->description ?? 'Section was rolled back by Administrator.',
             ]);
         }
 

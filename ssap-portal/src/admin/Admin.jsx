@@ -20,11 +20,9 @@ export function Admin({ onLogout }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState({ username: '', email: '', password: '', role: 'creator' });
 
-    // State for the currently logged in admin
     const [adminName, setAdminName] = useState("Administrator");
 
     useEffect(() => {
-        // Retrieve logged in user from localStorage
         const savedUser = JSON.parse(localStorage.getItem('user'));
         if (savedUser && savedUser.username) {
             setAdminName(savedUser.username);
@@ -48,14 +46,11 @@ export function Admin({ onLogout }) {
         }
     };
 
-    // --- Logout Handler ---
     const handleLogout = () => {
-        // Confirmation removed - now logs out immediately
         localStorage.removeItem('user');
         onLogout();
     };
 
-    // --- Dashboard Calculations ---
     const pipelineCount = sections.filter(s => s.current_status !== 'Published').length;
     const publishedCount = sections.filter(s => s.current_status === 'Published').length;
     const totalUsers = accounts.length;
@@ -72,20 +67,6 @@ export function Admin({ onLogout }) {
         return `${avgDays} Days`;
     };
 
-    {/*const getLeaderboard = () => {
-        const creators = accounts.filter(a => a.role === 'creator');
-        const board = creators.map(user => {
-            const cleanPasses = sections.filter(s =>
-                s.user_id === user.id &&
-                s.current_status === 'Published' &&
-                (!s.rejection_count || s.rejection_count === 0)
-            ).length;
-            return { username: user.username, count: cleanPasses };
-        });
-        return board.sort((a, b) => b.count - a.count).slice(0, 5);
-    };*/}
-
-    // --- Action Handlers ---
     const handleAssignTester = async (sectionId, testerId) => {
         if (!testerId) return;
         try {
@@ -98,13 +79,24 @@ export function Admin({ onLogout }) {
         } catch { alert("Assignment failed."); }
     };
 
+    // UPDATED LOGIC FOR ROLLBACK AND PUBLISH
     const handleStatusUpdate = async (id, newStatus) => {
-        const msg = newStatus === 'Published' ? "Push to LIVE?" : "Rollback section?";
+        const isRollback = newStatus === 'Issue Logged';
+        const msg = isRollback ? "Rollback section? This will pull it from the live view." : "Push to LIVE?";
+        
         if (!window.confirm(msg)) return;
+        
         try {
-            await api.put(`/sections/${id}`, { current_status: newStatus });
-            fetchInitialData();
-        } catch { alert("Update failed."); }
+            // If rolling back, we often want to clear the tester so it can be re-assigned
+            const payload = isRollback 
+                ? { current_status: newStatus, tester_id: null } 
+                : { current_status: newStatus };
+
+            await api.put(`/sections/${id}`, payload);
+            await fetchInitialData(); // Refresh UI
+        } catch { 
+            alert("Update failed. Please check server connection."); 
+        }
     };
 
     const handleCreateAccount = async (e) => {
@@ -143,7 +135,6 @@ export function Admin({ onLogout }) {
 
     return (
         <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
-            {/* SIDEBAR */}
             <aside className="w-72 bg-slate-900 text-white flex flex-col shadow-xl shrink-0">
                 <div className="p-8 text-2xl font-black italic flex items-center gap-3 border-b border-slate-800">
                     <FaUserShield className="text-blue-400 h-8 w-8" />
@@ -164,7 +155,6 @@ export function Admin({ onLogout }) {
                     ))}
                 </nav>
 
-                {/* LOGGED IN USER & LOGOUT */}
                 <div className="p-4 border-t border-slate-800 bg-slate-900/40">
                     <div className="flex items-center gap-3 px-2 mb-4">
                         <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 border border-blue-500/30 font-black">
@@ -184,7 +174,6 @@ export function Admin({ onLogout }) {
                 </div>
             </aside>
 
-            {/* MAIN CONTENT */}
             <main className="flex-1 overflow-y-auto p-10">
                 {loading ? (
                     <div className="h-full flex flex-col items-center justify-center">
@@ -193,7 +182,6 @@ export function Admin({ onLogout }) {
                     </div>
                 ) : (
                     <>
-                        {/* 1. DASHBOARD */}
                         {activeTab === 'home' && (
                             <div className="space-y-10">
                                 <h1 className="text-4xl font-black tracking-tight">System Overview</h1>
@@ -258,25 +246,10 @@ export function Admin({ onLogout }) {
                                             ) : <p className="text-slate-400 italic text-center py-8">No pending assignments.</p>}
                                         </div>
                                     </div>
-                                    {/*<div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-                                        <h3 className="font-black text-xl mb-6 flex items-center gap-2"><FaTrophy className="text-yellow-500" /> First-Try Masters</h3>
-                                        <div className="space-y-4">
-                                            {getLeaderboard().map((entry, index) => (
-                                                <div key={index} className="flex items-center justify-between p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${index === 0 ? 'bg-yellow-400 text-white' : 'bg-slate-200'}`}>{index + 1}</span>
-                                                        <span className="font-bold">{entry.username}</span>
-                                                    </div>
-                                                    <span className="bg-emerald-600 text-white px-3 py-1 rounded-lg text-xs font-black">{entry.count} Clean Passes</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>*/}
                                 </div>
                             </div>
                         )}
 
-                        {/* 2. REPOSITORY */}
                         {activeTab === 'repository' && (
                             <div className="space-y-6">
                                 <h2 className="text-3xl font-black">Asset Repository</h2>
@@ -311,26 +284,40 @@ export function Admin({ onLogout }) {
                             </div>
                         )}
 
-                        {/* 3. GO-LIVE MODULE */}
                         {activeTab === 'approval' && (
                             <div className="space-y-6">
                                 <h2 className="text-3xl font-black">Go-Live Module</h2>
                                 <div className="grid gap-6">
-                                    {sections.filter(sec => sec.current_status === 'Ready for Store' || sec.current_status === 'Published').length > 0 ? (
-                                        sections.filter(sec => sec.current_status === 'Ready for Store' || sec.current_status === 'Published').map(sec => (
+                                    {/* MODIFIED FILTER: Include 'Issue Logged' so you can see the result of the rollback */}
+                                    {sections.filter(sec => ['Ready for Store', 'Published', 'Issue Logged'].includes(sec.current_status)).length > 0 ? (
+                                        sections.filter(sec => ['Ready for Store', 'Published', 'Issue Logged'].includes(sec.current_status)).map(sec => (
                                             <div key={sec.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                                                 <div className="flex justify-between items-start mb-6">
                                                     <div>
                                                         <h3 className="text-xl font-black">{sec.title}</h3>
-                                                        <p className="text-slate-400 text-sm">Deployment: <span className="text-indigo-600 font-bold">{sec.current_status}</span></p>
+                                                        <p className="text-slate-400 text-sm">Deployment: 
+                                                            <span className={`font-bold ml-2 ${sec.current_status === 'Issue Logged' ? 'text-rose-600' : 'text-indigo-600'}`}>
+                                                                {sec.current_status}
+                                                            </span>
+                                                        </p>
                                                     </div>
                                                     <div className="flex gap-2">
                                                         {sec.current_status === 'Published' ? (
-                                                            <button onClick={() => handleStatusUpdate(sec.id, 'Issue Logged')} className="bg-rose-100 text-rose-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-rose-200">
+                                                            <button 
+                                                                onClick={() => handleStatusUpdate(sec.id, 'Issue Logged')} 
+                                                                className="bg-rose-100 text-rose-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-rose-200"
+                                                            >
                                                                 <FaUndo /> Emergency Rollback
                                                             </button>
+                                                        ) : sec.current_status === 'Issue Logged' ? (
+                                                            <span className="text-rose-500 font-black text-xs uppercase border border-rose-200 bg-rose-50 px-4 py-2 rounded-xl flex items-center gap-2">
+                                                                <FaTimes /> Rolled Back
+                                                            </span>
                                                         ) : (
-                                                            <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black flex items-center gap-2 hover:bg-emerald-700 shadow-lg shadow-emerald-200">
+                                                            <button 
+                                                                onClick={() => handleStatusUpdate(sec.id, 'Published')} 
+                                                                className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black flex items-center gap-2 hover:bg-emerald-700 shadow-lg shadow-emerald-200"
+                                                            >
                                                                 <FaRocket /> Publish to Store
                                                             </button>
                                                         )}
@@ -342,8 +329,8 @@ export function Admin({ onLogout }) {
                                                         <span className="text-xs font-bold text-slate-600 uppercase">Previews Ready</span>
                                                     </div>
                                                     <div className="bg-slate-50 p-4 rounded-xl flex items-center gap-3">
-                                                        <FaCheck className="text-emerald-600" />
-                                                        <span className="text-xs font-bold text-slate-600 uppercase">QA Verification Passed</span>
+                                                        <FaCheck className={sec.current_status === 'Issue Logged' ? 'text-slate-300' : 'text-emerald-600'} />
+                                                        <span className="text-xs font-bold text-slate-600 uppercase">QA Verification</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -357,7 +344,6 @@ export function Admin({ onLogout }) {
                             </div>
                         )}
 
-                        {/* 4. PERMISSIONS */}
                         {activeTab === 'users' && (
                             <div className="space-y-6">
                                 <div className="flex justify-between items-center">
@@ -396,7 +382,6 @@ export function Admin({ onLogout }) {
                 )}
             </main>
 
-            {/* MODAL: CREATE USER */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
