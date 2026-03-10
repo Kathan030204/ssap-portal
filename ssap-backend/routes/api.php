@@ -21,3 +21,8 @@ Route::apiResource('issues', IssuesController::class);
 
 Route::get('/design', [DesignController::class, 'index']);
 Route::post('/design', [DesignController::class, 'store']);
+
+// routes/api.php
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user-data', [UserController::class, 'index']);
+});
