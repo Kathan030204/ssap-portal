@@ -10,8 +10,15 @@ import { Admin } from '../admin/Admin';
 
 export function Login() {
   // Authentication States
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState(""); 
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    const user = localStorage.getItem('user');
+    return !!user;
+  });
+  const [userRole, setUserRole] = useState(() => {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user).role : "";
+  });
+
   
   // UI States
   const [isResetMode, setIsResetMode] = useState(false); 
