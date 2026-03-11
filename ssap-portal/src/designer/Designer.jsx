@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import {
   FaPalette, FaImage, FaDesktop, FaMobileAlt,
-  FaAd, FaSpinner, FaCloudUploadAlt, FaInfoCircle,
+  FaAd, FaSpinner, FaCloudUploadAlt, FaDownload,
   FaListUl, FaCheckCircle, FaLayerGroup, FaChartBar, FaStore, FaRocket, FaCheck,
   FaUserCircle, FaSignOutAlt, FaBell
 } from 'react-icons/fa';
@@ -14,10 +14,10 @@ export function Designer({ onLogout }) {
   const [sections, setSections] = useState([]);
   const [selectedSectionId, setSelectedSectionId] = useState(null);
   const [viewFilter, setViewFilter] = useState('all');
-  
+
   // --- AUTH STATE ---
   const [currentUser, setCurrentUser] = useState({ id: null, name: 'Designer', role: 'Designer' });
-  
+
   // --- NOTIFICATION STATE ---
   const [notifications, setNotifications] = useState([]);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
@@ -58,7 +58,7 @@ export function Designer({ onLogout }) {
     }
   };
 
-  useEffect(() => { 
+  useEffect(() => {
     // 1. Initialize User Data from Storage
     const storedUser = sessionStorage.getItem('user') || localStorage.getItem('user');
     if (storedUser) {
@@ -71,8 +71,8 @@ export function Designer({ onLogout }) {
     }
 
     // 2. Initial Data Fetch
-    fetchDesignTasks(); 
-    
+    fetchDesignTasks();
+
     // 3. Auto-refresh
     const interval = setInterval(fetchDesignTasks, 30000);
     return () => clearInterval(interval);
@@ -144,10 +144,33 @@ export function Designer({ onLogout }) {
       alert("Package Submitted Successfully!");
       setSelectedSectionId(null);
       fetchDesignTasks();
-    } catch  {
+    } catch {
       alert("Error uploading assets. Please check server connection.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownload = async (sectionId, title) => {
+    try {
+      const response = await api.get(`/sections/${sectionId}/download`, {
+        responseType: 'blob',
+      });
+      const section = sections.find(s => s.id === sectionId);
+      const originalFileName = section?.zip_url ? section.zip_url.split('/').pop() : 'file.zip';
+      const extension = originalFileName.split('.').pop();
+
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const cleanTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      link.setAttribute('download', `${cleanTitle}.${extension}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      alert("Download failed.");
     }
   };
 
@@ -158,7 +181,7 @@ export function Designer({ onLogout }) {
         <div className="p-8 text-xl font-black italic flex items-center gap-3 border-b border-slate-800">
           <FaPalette className="text-indigo-400" /> Designer Hub
         </div>
-        
+
         <nav className="flex-1 px-4 py-6 space-y-1">
           <p className="text-[10px] font-black text-slate-500 uppercase px-4 mb-2 tracking-widest">Workflow</p>
           <button onClick={() => { setViewFilter('all'); setSelectedSectionId(null); }}
@@ -248,12 +271,12 @@ export function Designer({ onLogout }) {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className={`${showPipeline ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-4`}>
               <h1 className="text-2xl font-black mb-6 capitalize tracking-tight flex items-center gap-3">
-                 <div className="h-2 w-10 bg-indigo-600 rounded-full"></div> {viewFilter} Repository
+                <div className="h-2 w-10 bg-indigo-600 rounded-full"></div> {viewFilter} Repository
               </h1>
               {loading && sections.length === 0 ? (
                 <div className="flex flex-col items-center py-20 text-slate-300">
-                    <FaSpinner className="animate-spin text-4xl mb-4" />
-                    <p className="font-black uppercase text-xs tracking-widest">Syncing Pipeline...</p>
+                  <FaSpinner className="animate-spin text-4xl mb-4" />
+                  <p className="font-black uppercase text-xs tracking-widest">Syncing Pipeline...</p>
                 </div>
               ) : (
                 displaySections.map((section) => (
@@ -265,9 +288,14 @@ export function Designer({ onLogout }) {
                       </div>
                       <h3 className="font-bold text-lg leading-none">{section.title}</h3>
                     </div>
-                    <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm ${getStatusClasses(section.current_status)}`}>
-                      {section.current_status}
-                    </span>
+                    <div className="flex gap-4 items-center">
+                      <button onClick={() => handleDownload(section.id, section.title)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl">
+                        <FaDownload />
+                      </button>
+                      <span className={`px-2 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm ${getStatusClasses(section.current_status)}`}>
+                        {section.current_status}
+                      </span>
+                    </div>
                   </div>
                 ))
               )}
@@ -307,10 +335,10 @@ export function Designer({ onLogout }) {
                     </div>
                   ) : (
                     <div className="text-center py-20">
-                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-dashed border-slate-200">
-                            <FaPalette className="text-slate-200 text-2xl" />
-                        </div>
-                        <p className="text-slate-400 italic text-sm">Pick a QA Passed item to start the asset upload workflow.</p>
+                      <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-dashed border-slate-200">
+                        <FaPalette className="text-slate-200 text-2xl" />
+                      </div>
+                      <p className="text-slate-400 italic text-sm">Pick a QA Passed item to start the asset upload workflow.</p>
                     </div>
                   )}
                 </div>
@@ -325,12 +353,12 @@ export function Designer({ onLogout }) {
 
 // Helper Sub-component
 function StatCard({ label, val, icon, color }) {
-    return (
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-            <p className={`text-[10px] font-black uppercase tracking-wider ${color}`}>{label}</p>
-            <div className="flex justify-between items-end mt-1 font-black text-3xl">
-                {val} <span className="text-slate-100 text-2xl">{icon}</span>
-            </div>
-        </div>
-    );
+  return (
+    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+      <p className={`text-[10px] font-black uppercase tracking-wider ${color}`}>{label}</p>
+      <div className="flex justify-between items-end mt-1 font-black text-3xl">
+        {val} <span className="text-slate-100 text-2xl">{icon}</span>
+      </div>
+    </div>
+  );
 }
