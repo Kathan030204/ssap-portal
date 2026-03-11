@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { 
   FaBug, FaCheckCircle, FaSearch, FaTimes, 
@@ -20,7 +20,7 @@ export function Tester({ onLogout }) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   
-  // --- IDENTITY STATE (Updated to SessionStorage) ---
+  // --- IDENTITY STATE ---
   const [currentUser, setCurrentUser] = useState({ id: null, name: '', role: '' });
   
   // --- NOTIFICATION STATE ---
@@ -41,55 +41,52 @@ export function Tester({ onLogout }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Initial Data Fetch & Polling
-  useEffect(() => { 
-    fetchInitialData(); 
-    const interval = setInterval(fetchInitialData, 30000); // Sync every 30s
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchInitialData = async () => {
+  // --- 1. MEMOIZED FETCH FUNCTION (FIXED) ---
+  const fetchInitialData = useCallback(async () => {
     try {
-      // CRITICAL FIX: Changed from localStorage to sessionStorage
-      const savedUser = JSON.parse(sessionStorage.getItem('user')); 
-      
-      if (savedUser) {
-        // Update user identity in state
-        setCurrentUser({ 
-          id: savedUser.id, 
-          name: savedUser.username || savedUser.name, 
-          role: savedUser.role 
-        });
-
-        const secRes = await api.get('/sections');
-        
-        // Filter: Show sections assigned to this tester OR already published assets
-        const relevantSections = secRes.data.filter(s => 
-          s.tester_id === savedUser.id || s.current_status === 'Published'
-        );
-
-        // Notify if there are new "In Testing" assignments
-        const newAssignments = relevantSections.filter(s => 
-           s.tester_id === savedUser.id && s.current_status === 'In Testing'
-        );
-
-        setNotifications(newAssignments.map(task => ({
-          id: task.id,
-          text: `New Assignment: ${task.title}`,
-          time: 'Just now'
-        })));
-
-        setSections(relevantSections);
-      } else {
-        // If no session found, force back to login
+      const storedUser = sessionStorage.getItem('user');
+      if (!storedUser) {
         onLogout();
+        return;
       }
+
+      const savedUser = JSON.parse(storedUser);
+      setCurrentUser({ 
+        id: savedUser.id, 
+        name: savedUser.username || savedUser.name, 
+        role: savedUser.role 
+      });
+
+      const secRes = await api.get('/sections');
+      
+      const relevantSections = secRes.data.filter(s => 
+        s.tester_id === savedUser.id || s.current_status === 'Published'
+      );
+
+      const newAssignments = relevantSections.filter(s => 
+         s.tester_id === savedUser.id && s.current_status === 'In Testing'
+      );
+
+      setNotifications(newAssignments.map(task => ({
+        id: task.id,
+        text: `New Assignment: ${task.title}`,
+        time: 'Just now'
+      })));
+
+      setSections(relevantSections);
     } catch (error) {
       console.error("Tester Sync Error:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [onLogout]);
+
+  // --- 2. INITIAL DATA FETCH & POLLING (FIXED) ---
+  useEffect(() => { 
+    fetchInitialData(); 
+    const interval = setInterval(fetchInitialData, 30000); 
+    return () => clearInterval(interval);
+  }, [fetchInitialData]); // Stable dependency
 
   const stats = {
     total: sections.length,
@@ -102,7 +99,6 @@ export function Tester({ onLogout }) {
     setSelectedSection(section);
     setShowReviewPanel(true);
     setIssueData({ type: 'Bug', severity: 'Major', desc: '' });
-    // Clear notification for this specific item if it exists
     setNotifications(prev => prev.filter(n => n.id !== section.id));
   };
 
@@ -121,7 +117,6 @@ export function Tester({ onLogout }) {
 
       await api.put(`/sections/${id}`, payload);
       
-      // Update local UI state
       setSections(prev => prev.map(s => s.id === id ? { ...s, current_status: newStatus, ...payload } : s));
       setShowReviewPanel(false);
       setSelectedSection(null);
@@ -162,11 +157,11 @@ export function Tester({ onLogout }) {
 
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
-                <FaUserCircle size={24} className="text-slate-400" />
+            <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 font-black text-slate-400 text-xs">
+                {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : <FaUserCircle size={20}/>}
             </div>
-            <div>
-              <p className="text-white font-black text-sm leading-none">{currentUser.name || "Loading..."}</p>
+            <div className="overflow-hidden">
+              <p className="text-white font-black text-sm leading-none truncate">{currentUser.name || "Loading..."}</p>
               <p className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mt-1">{currentUser.role}</p>
             </div>
           </div>
@@ -198,7 +193,7 @@ export function Tester({ onLogout }) {
                 <div className="absolute right-0 mt-4 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 z-50">
                   <h4 className="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-4">New Assignments</h4>
                   <div className="space-y-3 max-h-60 overflow-y-auto">
-                    {notifications.map(n => (
+                    {notifications.length > 0 ? notifications.map(n => (
                       <div key={n.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex gap-3 cursor-pointer hover:bg-purple-50" onClick={() => { openReview(sections.find(s => s.id === n.id)); setShowNotifDropdown(false); }}>
                         <div className="text-purple-600 mt-1"><FaLayerGroup size={14}/></div>
                         <div>
@@ -206,7 +201,7 @@ export function Tester({ onLogout }) {
                           <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Pending Review</p>
                         </div>
                       </div>
-                    ))}
+                    )) : <p className="text-center text-slate-400 py-4 text-xs italic">No new notifications</p>}
                   </div>
                 </div>
               )}

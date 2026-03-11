@@ -53,7 +53,7 @@ export function Creator({ onLogout }) {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [onLogout]);
 
   // Handle clicking outside notifications
   useEffect(() => {
