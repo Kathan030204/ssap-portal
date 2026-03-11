@@ -25,34 +25,33 @@ export function Creator({ onLogout }) {
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifRef = useRef(null);
 
-  // --- API FETCHING (MEMOIZED) ---
+  // --- API FETCHING ---
   const fetchSections = useCallback(async (userId) => {
     try {
       const response = await api.get(`/sections?creator_id=${userId}`);
       const mySections = response.data.filter(s => s.creator_id === userId);
       setSections(mySections);
 
-      // Updates notifications based on "Issue Logged" status
       const issueAlerts = mySections
         .filter(s => s.current_status === 'Issue Logged')
         .map(s => ({
           id: s.id,
           title: s.title,
           msg: "QA found a bug",
-          // Checks for severity in the section itself or the first issue object
           severity: s.severity || s.issues?.[0]?.severity || 'Major'
         }));
       setNotifications(issueAlerts);
 
-      // SYNC: Update the currently selected issue details if the list refreshes
       if (selectedIssue) {
         const liveUpdate = mySections.find(s => s.id === selectedIssue.id);
-        if (liveUpdate) setSelectedIssue(liveUpdate);
+        if (liveUpdate && liveUpdate.current_status === 'Issue Logged') {
+          setSelectedIssue(liveUpdate);
+        } else {
+          setSelectedIssue(null);
+        }
       }
     } catch (error) {
       console.error("Fetch Error:", error);
-    } finally {
-      //setLoading(false);
     }
   }, [selectedIssue]);
 
@@ -98,7 +97,7 @@ export function Creator({ onLogout }) {
 
   const startReupload = (sec) => {
     setIsEditing(sec.id);
-    setSelectedIssue(sec);
+    setSelectedIssue(null);
     setFormData({ title: sec.title, category: sec.category || 'Hero', docs: sec.docs || '' });
     setActiveTab('submit');
   };
@@ -112,7 +111,6 @@ export function Creator({ onLogout }) {
     data.append('docs', formData.docs);
     data.append('current_status', 'In Testing');
     data.append('creator_id', user.id);
-
     if (file) data.append('zip_file', file);
 
     try {
@@ -160,18 +158,18 @@ export function Creator({ onLogout }) {
         </div>
 
         <nav className="flex-1 p-4 space-y-2 mt-4">
-          <button onClick={() => { setActiveTab('inventory'); setStatusFilter('All'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'inventory' && statusFilter === 'All' ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-500'}`}>
+          <button onClick={() => { setActiveTab('inventory'); setStatusFilter('All'); setSelectedIssue(null); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'inventory' && statusFilter === 'All' ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-500'}`}>
             <FaHome size={18} /> Dashboard
           </button>
 
           <div className="pt-4 pb-2 px-4 text-[10px] font-black uppercase text-slate-600 tracking-widest">Pipeline</div>
           {['In Review', 'Fix Required', 'Published'].map((f) => (
-            <button key={f} onClick={() => { setActiveTab('inventory'); setStatusFilter(f); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${statusFilter === f && activeTab === 'inventory' ? 'bg-slate-800 text-indigo-400' : 'hover:bg-slate-800 text-slate-500'}`}>
+            <button key={f} onClick={() => { setActiveTab('inventory'); setStatusFilter(f); setSelectedIssue(null); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${statusFilter === f && activeTab === 'inventory' ? 'bg-slate-800 text-indigo-400' : 'hover:bg-slate-800 text-slate-500'}`}>
               {f === 'In Review' ? <FaFlask /> : f === 'Fix Required' ? <FaBug /> : <FaCheckCircle />} {f}
             </button>
           ))}
 
-          <button onClick={() => { setActiveTab('submit'); setIsEditing(null); }} className="mt-4 w-full flex items-center gap-3 px-4 py-3 rounded-xl font-black text-xs uppercase bg-white text-slate-900 hover:bg-indigo-50 transition-all">
+          <button onClick={() => { setActiveTab('submit'); setIsEditing(null); setSelectedIssue(null); }} className="mt-4 w-full flex items-center gap-3 px-4 py-3 rounded-xl font-black text-xs uppercase bg-white text-slate-900 hover:bg-indigo-50 transition-all">
             <FaPlus /> New Asset
           </button>
         </nav>
@@ -218,8 +216,9 @@ export function Creator({ onLogout }) {
         </header>
 
         {activeTab === 'inventory' ? (
-          <div className="grid grid-cols-12 gap-8">
-            <div className="col-span-8">
+          <div className={`grid ${statusFilter === 'Fix Required' ? 'grid-cols-12' : 'grid-cols-1'} gap-8`}>
+            {/* Table Column */}
+            <div className={statusFilter === 'Fix Required' ? 'col-span-8' : 'col-span-1'}>
               <div className="grid grid-cols-4 gap-4 mb-8">
                 <StatBox label="TOTAL" val={stats.total} />
                 <StatBox label="REVIEW" val={stats.testing} color="text-amber-500" />
@@ -238,16 +237,31 @@ export function Creator({ onLogout }) {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {filteredSections.map(sec => (
-                      <tr key={sec.id} onClick={() => setSelectedIssue(sec)} className={`group hover:bg-slate-50 transition cursor-pointer ${selectedIssue?.id === sec.id ? 'bg-indigo-50/50' : ''}`}>
+                      <tr 
+                        key={sec.id} 
+                        onClick={() => {
+                          if (statusFilter === 'Fix Required') setSelectedIssue(sec);
+                        }} 
+                        className={`group hover:bg-slate-50 transition ${statusFilter === 'Fix Required' ? 'cursor-pointer' : 'cursor-default'} ${selectedIssue?.id === sec.id ? 'bg-indigo-50/50' : ''}`}
+                      >
                         <td className="px-6 py-5">
                           <p className="font-black text-slate-800">{sec.title}</p>
                           <p className="text-[9px] font-bold text-slate-400 uppercase">#{sec.id}</p>
                         </td>
                         <td className="px-6 py-5 text-center">
-                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${sec.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-100 text-slate-500'}`}>{sec.current_status}</span>
+                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${sec.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-100 text-slate-500'}`}>
+                            {sec.current_status}
+                          </span>
                         </td>
                         <td className="px-6 py-5 text-right flex justify-end gap-2">
-                          {sec.current_status === 'Issue Logged' && <button onClick={(e) => { e.startReupload(sec); }} className="p-2 bg-slate-700 text-white rounded-lg shadow-lg">Fix Issues</button>}
+                          {sec.current_status === 'Issue Logged' && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); startReupload(sec); }} 
+                              className="p-2 bg-slate-700 text-white rounded-lg shadow-lg"
+                            >
+                              Fix Issues
+                            </button>
+                          )}
                           <button className="p-2 text-slate-400 hover:text-indigo-600"><FaEye /></button>
                         </td>
                       </tr>
@@ -257,69 +271,48 @@ export function Creator({ onLogout }) {
               </div>
             </div>
 
-            {/* --- REVISED DETAIL VIEWER --- */}
-            <div className="col-span-4">
-              <div className="bg-white rounded-3xl border border-slate-200 p-8 sticky top-10 shadow-sm">
-                {selectedIssue ? (
-                  <div className="space-y-6">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-black text-slate-900 italic uppercase">Inspector</h3>
-                      <button onClick={() => setSelectedIssue(null)} className="text-slate-300 hover:text-slate-900"><FaTimes /></button>
-                    </div>
+            {/* Issue Viewer: ONLY renders if statusFilter is 'Fix Required' */}
+            {statusFilter === 'Fix Required' && (
+              <div className="col-span-4">
+                <div className="bg-white rounded-3xl border border-slate-200 p-8 sticky top-10 shadow-sm min-h-100">
+                  {selectedIssue ? (
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-black text-slate-900 italic uppercase">Issue Logged Viewer</h3>
+                        <button onClick={() => setSelectedIssue(null)} className="text-slate-300 hover:text-slate-900"><FaTimes /></button>
+                      </div>
 
-                    <div className="pb-4 border-b border-slate-100">
-                      <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Asset Name</p>
-                      <p className="font-black text-slate-800 text-lg">{selectedIssue.title}</p>
-                    </div>
+                      <div className="pb-4 border-b border-slate-100">
+                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Asset Name</p>
+                        <p className="font-black text-slate-800 text-lg">{selectedIssue.title}</p>
+                      </div>
 
-                    {selectedIssue.current_status === 'Issue Logged' ? (
                       <div className="space-y-4">
                         <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Defect Log ({selectedIssue.issues?.length || 0})</p>
-
-                        {/* Scrollable container for multiple issues */}
-                        <div className="space-y-3 max-h-100 overflow-y-auto pr-2 custom-scrollbar">
-                          {selectedIssue.issues && selectedIssue.issues.length > 0 ? (
-                            selectedIssue.issues.map((bug, index) => (
-                              <div key={index} className="p-5 bg-rose-50 rounded-2xl border border-rose-100 relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
-                                <div className="flex justify-between items-start mb-2">
-                                  <span className="text-[8px] font-black bg-rose-600 text-white px-2 py-0.5 rounded uppercase">
-                                    {bug.severity || 'Major'}
-                                  </span>
-                                  <span className="text-[8px] font-black text-rose-300 uppercase">Issue #{index + 1}</span>
-                                </div>
-                                <p className="text-sm italic font-medium text-slate-700 leading-relaxed">
-                                  "{bug.description || bug.notes || 'No description provided.'}"
-                                </p>
-                              </div>
-                            ))
-                          ) : (
-                            /* Fallback if status is 'Issue Logged' but issues array is empty */
-                            <div className="p-5 bg-rose-50 rounded-2xl border border-rose-100 italic text-sm text-slate-600">
-                              "{selectedIssue.description || selectedIssue.notes || 'General fix required.'}"
+                        <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                          {selectedIssue.issues?.map((bug, index) => (
+                            <div key={index} className="p-5 bg-rose-50 rounded-2xl border border-rose-100 relative overflow-hidden">
+                              <div className="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
+                              <p className="text-sm italic font-medium text-slate-700 leading-relaxed">
+                                "{bug.description || bug.notes || 'No description provided.'}"
+                              </p>
                             </div>
-                          )}
+                          ))}
                         </div>
-
                         <button onClick={() => startReupload(selectedIssue)} className="w-full py-4 bg-slate-800 text-white rounded-2xl font-black text-xs uppercase shadow-xl flex items-center justify-center gap-2 hover:bg-slate-900 transition-all">
                           <FaSyncAlt /> Push Fix Build
                         </button>
                       </div>
-                    ) : (
-                      <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
-                        <FaCheckCircle className="mx-auto text-emerald-400 mb-3" size={32} />
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">No Issues Detected</p>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-32">
-                    <FaBoxOpen className="mx-auto text-slate-200 mb-4" size={48} />
-                    <p className="text-slate-300 italic text-sm">Select an asset from the list to view feedback.</p>
-                  </div>
-                )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-32">
+                      <FaBoxOpen className="mx-auto text-slate-200 mb-4" size={48} />
+                      <p className="text-slate-300 italic text-sm">Select an asset to view feedback.</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         ) : (
           /* FORM SECTION */
@@ -333,7 +326,7 @@ export function Creator({ onLogout }) {
               <div className="p-10 space-y-8">
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-1">Asset Label</label>
-                  <input required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full border-2 border-slate-50 bg-slate-50 rounded-2xl p-5 text-sm font-bold outline-none focus:border-indigo-500" placeholder="e.g. Hero Section V2" />
+                  <input required value={formData.title} disabled={isEditing} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full border-2 border-slate-50 bg-slate-50 rounded-2xl p-5 text-sm font-bold outline-none focus:border-indigo-500" placeholder="e.g. Hero Section V2" />
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-1">Package (.zip)</label>
