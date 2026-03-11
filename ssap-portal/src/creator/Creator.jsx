@@ -5,7 +5,8 @@ import {
   FaEye, FaTimes, FaPlus, FaSyncAlt,
   FaFileAlt, FaFlask, FaLayerGroup,
   FaHome, FaBoxOpen,
-  FaSignOutAlt, FaBell
+  FaSignOutAlt, FaBell,
+  FaUserCircle
 } from 'react-icons/fa';
 
 const api = axios.create({ baseURL: 'http://localhost:8000/api' });
@@ -177,7 +178,7 @@ export function Creator({ onLogout }) {
 
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-2 mb-4">
-            <div className="w-9 h-9 rounded-full bg-indigo-500 flex items-center justify-center text-white font-black text-xs">{user.name?.charAt(0)}</div>
+            <div className="w-9 h-9 rounded-full bg-indigo-500 flex items-center justify-center text-white font-black text-xs"><FaUserCircle size={20} /></div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-black text-white truncate">{user.name}</p>
               <p className="text-[9px] font-bold text-slate-500 uppercase">{user.role}</p>

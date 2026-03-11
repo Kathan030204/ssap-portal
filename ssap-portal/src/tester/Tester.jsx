@@ -210,7 +210,7 @@ export function Tester({ onLogout }) {
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
             <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center font-black text-white text-xs">
-              {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : <FaUserCircle />}
+              <FaUserCircle size={20} />
             </div>
             <div className="overflow-hidden">
               <p className="text-white font-black text-sm leading-none truncate">{currentUser.name || "Tester"}</p>

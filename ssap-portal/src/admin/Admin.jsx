@@ -7,7 +7,7 @@ import {
     FaDesktop,
     FaMobileAlt,
     FaChartLine, FaTrophy, FaClock,
-    FaSignOutAlt, FaUserShield, FaEye, FaRegImage
+    FaSignOutAlt, FaUserShield, FaEye, FaRegImage,FaUserCircle
 } from 'react-icons/fa';
 
 const api = axios.create({ baseURL: 'http://localhost:8000/api' });
@@ -210,7 +210,7 @@ export function Admin({ onLogout }) {
                 <div className="p-4 border-t border-slate-800 bg-slate-900/40">
                     <div className="flex items-center gap-3 px-2 mb-4">
                         <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 border border-blue-500/30 font-black">
-                            {adminUser.username.charAt(0).toUpperCase()}
+                            <FaUserCircle size={20} />
                         </div>
                         <div className="flex flex-col overflow-hidden">
                             <span className="font-black text-sm truncate uppercase tracking-wider">{adminUser.username}</span>
