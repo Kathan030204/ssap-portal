@@ -72,6 +72,23 @@ export function Admin({ onLogout }) {
         }
     };
 
+    const downloadDesignImage = (imageUrl, imageType, designId) => {
+        // Create a hidden link
+        const link = document.createElement('a');
+        link.href = imageUrl;
+
+        // Suggest a filename
+        const fileName = `${imageType.toLowerCase().replace(/\s+/g, '_')}_${designId}.png`;
+        link.setAttribute('download', fileName);
+
+        // Open in new tab (browser security often prevents direct download from different origins)
+        link.setAttribute('target', '_blank');
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    };
+
     const handleLogout = () => {
         localStorage.removeItem('user');
         onLogout();
@@ -429,6 +446,14 @@ export function Admin({ onLogout }) {
                                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{design.image_type}</p>
                                                     <p className="font-bold text-slate-700">Design #{design.id}</p>
                                                 </div>
+                                                {/* NEW DOWNLOAD BUTTON */}
+                                                <button
+                                                    onClick={() => downloadDesignImage(design.image_url, design.image_type, design.id)}
+                                                    className="bg-slate-900 text-white p-3 rounded-2xl hover:bg-blue-600 transition-all shadow-lg shadow-slate-200 group/btn"
+                                                    title="Download Image"
+                                                >
+                                                    <FaDownload className="group-hover/btn:scale-110 transition-transform" />
+                                                </button>
                                             </div>
                                         </div>
                                     ))}
