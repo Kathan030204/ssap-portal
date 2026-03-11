@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import {
   FaPalette, FaImage, FaDesktop, FaMobileAlt,
-  FaAd, FaSpinner, FaCloudUploadAlt, FaExternalLinkAlt, FaInfoCircle,
+  FaAd, FaSpinner, FaCloudUploadAlt, FaInfoCircle,
   FaListUl, FaCheckCircle, FaLayerGroup, FaChartBar, FaStore, FaRocket, FaCheck,
-  FaUserCircle, FaSignOutAlt, FaBell // Added FaBell
+  FaUserCircle, FaSignOutAlt, FaBell
 } from 'react-icons/fa';
 
 const api = axios.create({ baseURL: 'http://localhost:8000/api' });
@@ -14,7 +14,9 @@ export function Designer({ onLogout }) {
   const [sections, setSections] = useState([]);
   const [selectedSectionId, setSelectedSectionId] = useState(null);
   const [viewFilter, setViewFilter] = useState('all');
-  const [currentUser, setCurrentUser] = useState({ id: null, name: '', role: '' });
+  
+  // --- AUTH STATE ---
+  const [currentUser, setCurrentUser] = useState({ id: null, name: 'Designer', role: 'Designer' });
   
   // --- NOTIFICATION STATE ---
   const [notifications, setNotifications] = useState([]);
@@ -42,8 +44,7 @@ export function Designer({ onLogout }) {
       const allSections = response.data;
       setSections(allSections);
 
-      // NOTIFICATION LOGIC: Filter sections that are 'QA Passed'
-      // These are tasks ready for the Designer to upload assets.
+      // Filter sections that are 'QA Passed' for notifications
       const readyForDesign = allSections.filter(s => s.current_status === 'QA Passed');
       const alerts = readyForDesign.map(s => ({
         id: s.id,
@@ -52,25 +53,28 @@ export function Designer({ onLogout }) {
         time: "Action Required"
       }));
       setNotifications(alerts);
-
     } catch (error) {
       console.error("Fetch error:", error);
     }
   };
 
   useEffect(() => { 
-    fetchDesignTasks(); 
-    // Auto-refresh every 30 seconds to catch QA updates
-    const interval = setInterval(fetchDesignTasks, 30000);
-
-    const savedUser = JSON.parse(localStorage.getItem('user'));
-    if (savedUser) {
+    // 1. Initialize User Data from Storage
+    const storedUser = sessionStorage.getItem('user') || localStorage.getItem('user');
+    if (storedUser) {
+      const savedUser = JSON.parse(storedUser);
       setCurrentUser({
-        id: savedUser.id,
-        name: savedUser.username || savedUser.name,
-        role: savedUser.role
+        id: savedUser.id || 'N/A',
+        name: savedUser.username || savedUser.name || savedUser.display_name || "Designer",
+        role: savedUser.role || "Designer"
       });
     }
+
+    // 2. Initial Data Fetch
+    fetchDesignTasks(); 
+    
+    // 3. Auto-refresh
+    const interval = setInterval(fetchDesignTasks, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -78,11 +82,10 @@ export function Designer({ onLogout }) {
     setPendingAssets({ desktop: null, mobile: null, banner: null });
   }, [selectedSectionId]);
 
-  // Handle selecting a task from the notification bell
   const handleNotifClick = (sectionId) => {
-    setViewFilter('passed'); // Switch view to show the item
-    setSelectedSectionId(sectionId); // Select it
-    setShowNotifDropdown(false); // Close menu
+    setViewFilter('passed');
+    setSelectedSectionId(sectionId);
+    setShowNotifDropdown(false);
   };
 
   const getStatusClasses = (status) => {
@@ -107,7 +110,7 @@ export function Designer({ onLogout }) {
   const stats = {
     total: sections.length,
     passed: sections.filter(s => s.current_status === 'QA Passed').length,
-    completed: sections.filter(s => ['Published'].includes(s.current_status)).length
+    completed: sections.filter(s => ['Published', 'Ready for Store'].includes(s.current_status)).length
   };
 
   const selectedSection = sections.find(s => s.id === selectedSectionId);
@@ -141,8 +144,8 @@ export function Designer({ onLogout }) {
       alert("Package Submitted Successfully!");
       setSelectedSectionId(null);
       fetchDesignTasks();
-    } catch (err) {
-      console.error("Submit Error:", err);
+    } catch  {
+      alert("Error uploading assets. Please check server connection.");
     } finally {
       setLoading(false);
     }
@@ -179,18 +182,19 @@ export function Designer({ onLogout }) {
           </div>
         </nav>
 
+        {/* LOGGED IN USER SECTION */}
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 border border-indigo-500/30">
-              <FaUserCircle size={24} />
+            <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 border border-indigo-500/30 font-black">
+              {currentUser.name.charAt(0).toUpperCase()}
             </div>
-            <div>
-              <p className="text-white font-black text-sm leading-none truncate w-32">{currentUser.name || "Designer"}</p>
-              <p className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mt-1">ID: {currentUser.id || 'N/A'} • {currentUser.role}</p>
+            <div className="overflow-hidden">
+              <p className="text-white font-black text-sm leading-none truncate w-32 uppercase tracking-tight">{currentUser.name}</p>
+              <p className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mt-1">Role: {currentUser.role}</p>
             </div>
           </div>
-          <button onClick={() => { localStorage.removeItem('user'); onLogout(); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-rose-400 hover:bg-rose-400/10 transition-all font-black text-xs uppercase tracking-widest">
-            <FaSignOutAlt /> Logout
+          <button onClick={() => { sessionStorage.clear(); localStorage.clear(); onLogout(); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-rose-400 hover:bg-rose-400/10 transition-all font-black text-xs uppercase tracking-widest">
+            <FaSignOutAlt /> Terminate Session
           </button>
         </div>
       </aside>
@@ -200,16 +204,13 @@ export function Designer({ onLogout }) {
         <div className="max-w-7xl mx-auto">
           <header className="flex justify-between items-start mb-10">
             <div>
-              <h2 className="text-4xl font-black text-slate-900 tracking-tight italic">Design Dashboard</h2>
-              <p className="text-slate-500 font-medium mt-1">Welcome back, {currentUser.name}. You are working in the Design Hub.</p>
+              <h2 className="text-4xl font-black text-slate-900 tracking-tight italic">Studio Pipeline</h2>
+              <p className="text-slate-500 font-medium mt-1">Active User: <span className="text-indigo-600 font-bold">{currentUser.name}</span></p>
             </div>
 
-            {/* --- NOTIFICATION BELL COMPONENT --- */}
             <div className="relative" ref={notifRef}>
-              <button 
-                onClick={() => setShowNotifDropdown(!showNotifDropdown)}
-                className={`p-4 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 transition-all relative ${notifications.length > 0 ? 'shadow-xl shadow-indigo-100' : ''}`}
-              >
+              <button onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+                className={`p-4 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 transition-all relative ${notifications.length > 0 ? 'shadow-xl shadow-indigo-100 border-indigo-100' : ''}`}>
                 <FaBell size={22} />
                 {notifications.length > 0 && (
                   <span className="absolute top-3 right-3 w-3.5 h-3.5 bg-rose-500 border-2 border-white rounded-full animate-bounce"></span>
@@ -217,25 +218,19 @@ export function Designer({ onLogout }) {
               </button>
 
               {showNotifDropdown && (
-                <div className="absolute right-0 mt-4 w-80 bg-white rounded-4xl shadow-2xl border border-slate-100 p-6 z-50 animate-in fade-in zoom-in duration-200">
-                  <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-4">Pending Design Tasks</h4>
-                  <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="absolute right-0 mt-4 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 z-50 overflow-hidden">
+                  <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-4">QA Approvals</h4>
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
                     {notifications.length > 0 ? (
                       notifications.map(n => (
-                        <div 
-                          key={n.id} 
-                          onClick={() => handleNotifClick(n.id)}
-                          className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 group cursor-pointer hover:bg-indigo-600 transition-all"
-                        >
+                        <div key={n.id} onClick={() => handleNotifClick(n.id)}
+                          className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 group cursor-pointer hover:bg-indigo-600 transition-all">
                           <p className="text-xs font-black text-indigo-900 group-hover:text-white leading-tight">{n.title}</p>
-                          <p className="text-[10px] font-bold text-indigo-400 group-hover:text-indigo-200 mt-1 uppercase">{n.msg}</p>
+                          <p className="text-[10px] font-bold text-indigo-400 group-hover:text-indigo-200 mt-1 uppercase italic">{n.msg}</p>
                         </div>
                       ))
                     ) : (
-                      <div className="py-8 text-center">
-                        <FaCheckCircle className="mx-auto text-slate-200 mb-2" size={24} />
-                        <p className="text-slate-400 italic text-sm">No pending QA approvals.</p>
-                      </div>
+                      <p className="text-slate-400 italic text-sm text-center py-4">All caught up!</p>
                     )}
                   </div>
                 </div>
@@ -245,36 +240,25 @@ export function Designer({ onLogout }) {
 
           {/* STATS CARDS */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-              <p className="text-slate-400 text-[10px] font-black uppercase tracking-wider">Total Library</p>
-              <div className="flex justify-between items-end mt-1 font-black text-3xl">
-                {stats.total} <FaLayerGroup className="text-slate-200 text-2xl" />
-              </div>
-            </div>
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm border-l-4 border-l-indigo-500">
-              <p className="text-indigo-500 text-[10px] font-black uppercase tracking-wider">QA Approved</p>
-              <div className="flex justify-between items-end mt-1 font-black text-3xl">
-                {stats.passed} <FaCheckCircle className="text-indigo-100 text-2xl" />
-              </div>
-            </div>
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm border-l-4 border-l-emerald-500">
-              <p className="text-emerald-500 text-[10px] font-black uppercase tracking-wider">Total Completed</p>
-              <div className="flex justify-between items-end mt-1 font-black text-3xl text-emerald-600">
-                {stats.completed} <FaChartBar className="text-emerald-100 text-2xl" />
-              </div>
-            </div>
+            <StatCard label="Master Library" val={stats.total} icon={<FaLayerGroup />} color="text-slate-400" />
+            <StatCard label="Awaiting Assets" val={stats.passed} icon={<FaCheckCircle />} color="text-indigo-500" />
+            <StatCard label="Handed Over" val={stats.completed} icon={<FaChartBar />} color="text-emerald-500" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className={`${showPipeline ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-4`}>
-              <h1 className="text-3xl font-black mb-6 capitalize tracking-tight">{viewFilter.replace('all', 'Master')} View</h1>
+              <h1 className="text-2xl font-black mb-6 capitalize tracking-tight flex items-center gap-3">
+                 <div className="h-2 w-10 bg-indigo-600 rounded-full"></div> {viewFilter} Repository
+              </h1>
               {loading && sections.length === 0 ? (
-                <FaSpinner className="animate-spin text-3xl text-indigo-600 mx-auto block mt-10" />
+                <div className="flex flex-col items-center py-20 text-slate-300">
+                    <FaSpinner className="animate-spin text-4xl mb-4" />
+                    <p className="font-black uppercase text-xs tracking-widest">Syncing Pipeline...</p>
+                </div>
               ) : (
                 displaySections.map((section) => (
                   <div key={section.id} onClick={() => showPipeline && setSelectedSectionId(section.id)}
-                    className={`p-6 rounded-3xl border-2 transition-all bg-white flex justify-between items-center ${selectedSectionId === section.id ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-lg' : 'border-transparent shadow-sm'} ${showPipeline ? 'cursor-pointer hover:border-slate-300' : ''}`}
-                  >
+                    className={`p-6 rounded-3xl border-2 transition-all bg-white flex justify-between items-center ${selectedSectionId === section.id ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-lg' : 'border-transparent shadow-sm'} ${showPipeline ? 'cursor-pointer hover:border-slate-300' : ''}`}>
                     <div className="flex gap-4 items-center">
                       <div className={`p-4 rounded-2xl ${selectedSectionId === section.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
                         <FaImage size={20} />
@@ -292,16 +276,18 @@ export function Designer({ onLogout }) {
             {showPipeline && (
               <div className="lg:col-span-5">
                 <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm sticky top-10">
-                  <h3 className="font-bold text-xl mb-6 italic">Asset Pipeline</h3>
+                  <h3 className="font-black text-xl mb-6 italic flex items-center gap-2">
+                    <FaCloudUploadAlt className="text-indigo-600" /> Asset Pipeline
+                  </h3>
                   {selectedSection ? (
                     <div className="space-y-4">
                       <div className="p-4 bg-indigo-50 rounded-2xl mb-4 border border-indigo-100">
-                        <p className="text-[10px] font-black text-indigo-400 uppercase">Target Section</p>
+                        <p className="text-[10px] font-black text-indigo-400 uppercase">Current Project</p>
                         <p className="font-bold text-indigo-900 leading-tight">{selectedSection.title}</p>
                       </div>
                       {[
-                        { id: 'desktop', icon: <FaDesktop />, label: 'Desktop Asset' },
-                        { id: 'mobile', icon: <FaMobileAlt />, label: 'Mobile Asset' },
+                        { id: 'desktop', icon: <FaDesktop />, label: 'Desktop (1920x1080)' },
+                        { id: 'mobile', icon: <FaMobileAlt />, label: 'Mobile (1080x1920)' },
                         { id: 'banner', icon: <FaAd />, label: 'Marketing Banner' }
                       ].map(asset => (
                         <label key={asset.id} className={`group flex flex-col p-4 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${pendingAssets[asset.id] ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-200 hover:border-indigo-400'}`}>
@@ -311,21 +297,21 @@ export function Designer({ onLogout }) {
                             </span>
                             {pendingAssets[asset.id] ? <FaCheck className="text-emerald-500" /> : <FaCloudUploadAlt className="text-slate-300 group-hover:text-indigo-500" />}
                           </div>
-                          {pendingAssets[asset.id] && <p className="text-[10px] text-emerald-600 mt-2 font-bold truncate">File: {pendingAssets[asset.id].name}</p>}
+                          {pendingAssets[asset.id] && <p className="text-[10px] text-emerald-600 mt-2 font-bold truncate">✓ {pendingAssets[asset.id].name}</p>}
                           <input type="file" className="hidden" disabled={loading} onChange={(e) => handleFileSelect(e, asset.id)} />
                         </label>
                       ))}
-                      <button onClick={handleFinalSubmit} disabled={loading || selectedSection.current_status !== 'QA Passed'} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg hover:bg-indigo-700 disabled:bg-slate-200 transition-all mt-6">
-                        {loading ? <FaSpinner className="animate-spin mx-auto text-xl" /> : 'Submit Design Package'}
+                      <button onClick={handleFinalSubmit} disabled={loading || selectedSection.current_status !== 'QA Passed'} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg hover:bg-indigo-700 disabled:bg-slate-200 transition-all mt-6 uppercase tracking-widest text-xs">
+                        {loading ? <FaSpinner className="animate-spin mx-auto text-xl" /> : 'Finalize Package'}
                       </button>
-                      {selectedSection.current_status !== 'QA Passed' && (
-                        <p className="text-center text-[10px] text-rose-500 font-bold uppercase italic mt-4 flex items-center justify-center gap-2">
-                          <FaInfoCircle /> Must be 'QA Passed' to submit
-                        </p>
-                      )}
                     </div>
                   ) : (
-                    <div className="text-center py-20 text-slate-400 italic">Select a section from the list or notification to start.</div>
+                    <div className="text-center py-20">
+                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-dashed border-slate-200">
+                            <FaPalette className="text-slate-200 text-2xl" />
+                        </div>
+                        <p className="text-slate-400 italic text-sm">Pick a QA Passed item to start the asset upload workflow.</p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -335,4 +321,16 @@ export function Designer({ onLogout }) {
       </main>
     </div>
   );
+}
+
+// Helper Sub-component
+function StatCard({ label, val, icon, color }) {
+    return (
+        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+            <p className={`text-[10px] font-black uppercase tracking-wider ${color}`}>{label}</p>
+            <div className="flex justify-between items-end mt-1 font-black text-3xl">
+                {val} <span className="text-slate-100 text-2xl">{icon}</span>
+            </div>
+        </div>
+    );
 }

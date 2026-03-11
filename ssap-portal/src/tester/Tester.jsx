@@ -12,21 +12,25 @@ const api = axios.create({
 });
 
 export function Tester({ onLogout }) {
+  // --- UI & DATA STATES ---
   const [activeFilter, setActiveFilter] = useState('all'); 
   const [showReviewPanel, setShowReviewPanel] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // --- IDENTITY STATE (Updated to SessionStorage) ---
   const [currentUser, setCurrentUser] = useState({ id: null, name: '', role: '' });
   
-  // Notification State
+  // --- NOTIFICATION STATE ---
   const [notifications, setNotifications] = useState([]);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifRef = useRef(null);
 
   const [issueData, setIssueData] = useState({ type: 'Bug', severity: 'Major', desc: '' });
 
+  // Handle outside clicks for notification dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (notifRef.current && !notifRef.current.contains(event.target)) {
@@ -37,17 +41,20 @@ export function Tester({ onLogout }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Initial Data Fetch & Polling
   useEffect(() => { 
     fetchInitialData(); 
-    const interval = setInterval(fetchInitialData, 30000);
+    const interval = setInterval(fetchInitialData, 30000); // Sync every 30s
     return () => clearInterval(interval);
   }, []);
 
   const fetchInitialData = async () => {
     try {
-      // Logic adjusted to match the "Old" data fetching pattern but using storage
-      const savedUser = JSON.parse(localStorage.getItem('user')); 
+      // CRITICAL FIX: Changed from localStorage to sessionStorage
+      const savedUser = JSON.parse(sessionStorage.getItem('user')); 
+      
       if (savedUser) {
+        // Update user identity in state
         setCurrentUser({ 
           id: savedUser.id, 
           name: savedUser.username || savedUser.name, 
@@ -55,25 +62,30 @@ export function Tester({ onLogout }) {
         });
 
         const secRes = await api.get('/sections');
-        // Matching "Old" filtering logic
+        
+        // Filter: Show sections assigned to this tester OR already published assets
         const relevantSections = secRes.data.filter(s => 
           s.tester_id === savedUser.id || s.current_status === 'Published'
         );
 
+        // Notify if there are new "In Testing" assignments
         const newAssignments = relevantSections.filter(s => 
            s.tester_id === savedUser.id && s.current_status === 'In Testing'
         );
 
         setNotifications(newAssignments.map(task => ({
           id: task.id,
-          text: `New Task Assigned: ${task.title}`,
+          text: `New Assignment: ${task.title}`,
           time: 'Just now'
         })));
 
         setSections(relevantSections);
+      } else {
+        // If no session found, force back to login
+        onLogout();
       }
     } catch (error) {
-      console.error("Sync Error:", error);
+      console.error("Tester Sync Error:", error);
     } finally {
       setLoading(false);
     }
@@ -90,6 +102,7 @@ export function Tester({ onLogout }) {
     setSelectedSection(section);
     setShowReviewPanel(true);
     setIssueData({ type: 'Bug', severity: 'Major', desc: '' });
+    // Clear notification for this specific item if it exists
     setNotifications(prev => prev.filter(n => n.id !== section.id));
   };
 
@@ -97,7 +110,7 @@ export function Tester({ onLogout }) {
     try {
       const payload = { 
         current_status: newStatus,
-        notes: newStatus === 'QA Passed' ? 'Approved' : issueData.desc 
+        notes: newStatus === 'QA Passed' ? 'Approved by QA' : issueData.desc 
       };
 
       if (newStatus === 'Issue Logged') {
@@ -108,12 +121,13 @@ export function Tester({ onLogout }) {
 
       await api.put(`/sections/${id}`, payload);
       
+      // Update local UI state
       setSections(prev => prev.map(s => s.id === id ? { ...s, current_status: newStatus, ...payload } : s));
       setShowReviewPanel(false);
       setSelectedSection(null);
-      alert(newStatus === 'QA Passed' ? "Section Approved!" : "Issue Reported Successfully!");
+      alert(newStatus === 'QA Passed' ? "Asset Approved!" : "Issue Logged to Creator!");
     } catch {
-      alert("Database Sync Failed. Check if all fields are filled.");
+      alert("Sync Error: Could not update the server.");
     }
   };
 
@@ -129,27 +143,30 @@ export function Tester({ onLogout }) {
 
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
-      {/* SIDEBAR - Restored to Old Design */}
+      
+      {/* SIDEBAR */}
       <div className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col sticky top-0 h-screen">
         <div className="p-8">
           <h1 className="text-2xl font-black italic tracking-tighter text-white flex items-center gap-2">
             <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center text-white not-italic text-sm">QA</div>
-            TestingHub
+            Portal
           </h1>
         </div>
         
         <nav className="flex-1 px-4 space-y-2">
-          <SidebarItem icon={<FaHome />} label="All Assets" active={activeFilter === 'all'} onClick={() => setActiveFilter('all')} />
-          <SidebarItem icon={<FaClock className="text-blue-400" />} label="In Testing" count={stats.pending} active={activeFilter === 'pending'} onClick={() => setActiveFilter('pending')} />
+          <SidebarItem icon={<FaHome />} label="Dashboard" active={activeFilter === 'all'} onClick={() => setActiveFilter('all')} />
+          <SidebarItem icon={<FaClock className="text-blue-400" />} label="Waitlist" count={stats.pending} active={activeFilter === 'pending'} onClick={() => setActiveFilter('pending')} />
           <SidebarItem icon={<FaExclamationTriangle className="text-rose-400" />} label="Issues" count={stats.logged} active={activeFilter === 'logged'} onClick={() => setActiveFilter('logged')} />
-          <SidebarItem icon={<FaCheckDouble className="text-emerald-400" />} label="Completed" count={stats.passed} active={activeFilter === 'passed'} onClick={() => setActiveFilter('passed')} />
+          <SidebarItem icon={<FaCheckDouble className="text-emerald-400" />} label="Success" count={stats.passed} active={activeFilter === 'passed'} onClick={() => setActiveFilter('passed')} />
         </nav>
 
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
-            <FaUserCircle size={32} className="text-slate-500" />
+            <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
+                <FaUserCircle size={24} className="text-slate-400" />
+            </div>
             <div>
-              <p className="text-white font-black text-sm leading-none">{currentUser.name || "Tester"}</p>
+              <p className="text-white font-black text-sm leading-none">{currentUser.name || "Loading..."}</p>
               <p className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mt-1">{currentUser.role}</p>
             </div>
           </div>
@@ -164,41 +181,32 @@ export function Tester({ onLogout }) {
         <header className="flex items-center justify-between mb-10">
           <div>
             <h2 className="text-4xl font-black text-slate-900 tracking-tight italic">Tester Panel</h2>
-            <p className="text-slate-500 font-medium">Single-Sync Data Protocol Active</p>
+            <p className="text-slate-500 font-medium italic">Active Session: {currentUser.name}</p>
           </div>
           
           <div className="flex items-center gap-4">
-            {/* Notification Bell - Styled to match search bar height/look */}
             <div className="relative" ref={notifRef}>
               <button 
                 onClick={() => setShowNotifDropdown(!showNotifDropdown)}
                 className="p-4 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-purple-600 transition-all shadow-sm"
               >
                 <FaBell size={20} />
-                {notifications.length > 0 && (
-                  <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-rose-500 border-2 border-white rounded-full"></span>
-                )}
+                {notifications.length > 0 && <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-rose-500 border-2 border-white rounded-full"></span>}
               </button>
 
               {showNotifDropdown && (
                 <div className="absolute right-0 mt-4 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 z-50">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="font-black text-[10px] uppercase tracking-widest text-slate-400">Notifications</h4>
-                  </div>
+                  <h4 className="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-4">New Assignments</h4>
                   <div className="space-y-3 max-h-60 overflow-y-auto">
-                    {notifications.length > 0 ? (
-                      notifications.map(n => (
-                        <div key={n.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex gap-3 cursor-pointer hover:bg-purple-50 transition-colors" onClick={() => { openReview(sections.find(s => s.id === n.id)); setShowNotifDropdown(false); }}>
-                          <div className="text-purple-600 mt-1"><FaLayerGroup size={14}/></div>
-                          <div>
-                            <p className="text-xs font-black text-slate-800">{n.text}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">{n.time}</p>
-                          </div>
+                    {notifications.map(n => (
+                      <div key={n.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex gap-3 cursor-pointer hover:bg-purple-50" onClick={() => { openReview(sections.find(s => s.id === n.id)); setShowNotifDropdown(false); }}>
+                        <div className="text-purple-600 mt-1"><FaLayerGroup size={14}/></div>
+                        <div>
+                          <p className="text-xs font-black text-slate-800">{n.text}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Pending Review</p>
                         </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-4 text-slate-400 text-xs italic">No new tasks</div>
-                    )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -206,49 +214,38 @@ export function Tester({ onLogout }) {
 
             <div className="relative">
               <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Filter assets..." 
-                className="pl-12 pr-6 py-4 bg-white border border-slate-200 rounded-2xl w-80 shadow-sm outline-none focus:ring-2 ring-purple-500/20" 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-              />
+              <input type="text" placeholder="Search assets..." className="pl-12 pr-6 py-4 bg-white border border-slate-200 rounded-2xl w-80 shadow-sm outline-none focus:ring-2 ring-purple-500/20" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
           </div>
         </header>
 
-        {/* Status Cards - Restored to Old Labels */}
         <div className="grid grid-cols-4 gap-6 mb-10">
-          <StatusCard label="Total" count={stats.total} icon={<FaListUl />} color="bg-slate-100 text-slate-600" />
-          <StatusCard label="Waitlist" count={stats.pending} icon={<FaClock />} color="bg-blue-50 text-blue-600" />
-          <StatusCard label="Bugs" count={stats.logged} icon={<FaExclamationTriangle />} color="bg-rose-50 text-rose-600" />
-          <StatusCard label="Success" count={stats.passed} icon={<FaCheckDouble />} color="bg-emerald-50 text-emerald-600" />
+          <StatusCard label="Total Items" count={stats.total} icon={<FaListUl />} color="bg-slate-100 text-slate-600" />
+          <StatusCard label="Waiting" count={stats.pending} icon={<FaClock />} color="bg-blue-50 text-blue-600" />
+          <StatusCard label="Active Bugs" count={stats.logged} icon={<FaExclamationTriangle />} color="bg-rose-50 text-rose-600" />
+          <StatusCard label="Published" count={stats.passed} icon={<FaCheckDouble />} color="bg-emerald-50 text-emerald-600" />
         </div>
 
         {loading ? (
           <div className="py-40 text-center"><FaSpinner className="animate-spin text-purple-600 text-5xl mx-auto" /></div>
         ) : (
           <div className={`grid gap-8 ${showReviewPanel ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
+            
+            {/* LIST VIEW */}
             <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden h-fit">
               <table className="w-full text-left">
                 <thead className="bg-slate-50/50">
                   <tr className="border-b border-slate-100">
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset Name</th>
                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 text-right uppercase">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filteredSections.map((item) => (
-                    <tr 
-                      key={item.id} 
-                      onClick={() => openReview(item)} 
-                      className={`group cursor-pointer hover:bg-slate-50 transition-all ${selectedSection?.id === item.id ? 'bg-purple-50' : ''}`}
-                    >
+                    <tr key={item.id} onClick={() => openReview(item)} className={`group cursor-pointer hover:bg-slate-50 transition-all ${selectedSection?.id === item.id ? 'bg-purple-50' : ''}`}>
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-purple-100 group-hover:text-purple-600 transition-colors">
-                            <FaLayerGroup />
-                          </div>
+                          <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-purple-100 group-hover:text-purple-600 transition-colors"><FaLayerGroup /></div>
                           <p className="font-black text-slate-800">{item.title}</p>
                         </div>
                       </td>
@@ -256,9 +253,7 @@ export function Tester({ onLogout }) {
                         <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase border ${
                           item.current_status === 'Published' || item.current_status === 'QA Passed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                           item.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-blue-50 text-blue-600 border-blue-100'
-                        }`}>
-                          {item.current_status}
-                        </span>
+                        }`}>{item.current_status}</span>
                       </td>
                     </tr>
                   ))}
@@ -266,7 +261,7 @@ export function Tester({ onLogout }) {
               </table>
             </div>
 
-            {/* Review Panel - Restored to Old Labels and Button Colors */}
+            {/* REVIEW PANEL */}
             {showReviewPanel && selectedSection && (
               <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl p-10 h-fit sticky top-10">
                 <div className="flex justify-between items-center mb-8">
@@ -275,57 +270,29 @@ export function Tester({ onLogout }) {
                 </div>
 
                 <div className="space-y-8">
-                  <button 
-                    onClick={() => handleUpdateStatus(selectedSection.id, 'QA Passed')} 
-                    className="w-full py-5 bg-emerald-500 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-emerald-600 transition-all shadow-lg"
-                  >
-                    <FaCheckCircle /> Approve Asset
+                  <button onClick={() => handleUpdateStatus(selectedSection.id, 'QA Passed')} className="w-full py-5 bg-emerald-500 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-emerald-600 transition-all shadow-lg active:scale-95">
+                    <FaCheckCircle /> Approve for Release
                   </button>
 
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100"></span></div>
-                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-4 text-slate-400 font-black">Report Revision</span></div>
-                  </div>
+                  <div className="relative"><div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100"></span></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-4 text-slate-400 font-black">Reject & Log Issue</span></div></div>
 
                   <section className="space-y-4">
                     <div className="flex gap-2">
-                      {['Bug', 'Style', 'Responsive'].map(type => (
-                        <button 
-                          key={type} 
-                          onClick={() => setIssueData({ ...issueData, type })}
-                          className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${issueData.type === type ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-500'}`}
-                        >
-                          {type}
-                        </button>
+                      {['Bug', 'UI/UX', 'Logic'].map(type => (
+                        <button key={type} onClick={() => setIssueData({ ...issueData, type })} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${issueData.type === type ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>{type}</button>
                       ))}
                     </div>
 
                     <div className="grid grid-cols-3 gap-2">
                       {['Minor', 'Major', 'Critical'].map(sev => (
-                        <button 
-                          key={sev} 
-                          onClick={() => setIssueData({ ...issueData, severity: sev })}
-                          className={`py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${issueData.severity === sev ? 'bg-rose-600 border-rose-600 text-white' : 'bg-slate-50 border-slate-100 text-slate-400'}`}
-                        >
-                          {sev}
-                        </button>
+                        <button key={sev} onClick={() => setIssueData({ ...issueData, severity: sev })} className={`py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${issueData.severity === sev ? 'bg-rose-600 border-rose-600 text-white' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>{sev}</button>
                       ))}
                     </div>
 
-                    <textarea 
-                      rows="4" 
-                      className="w-full p-5 bg-slate-50 border border-slate-100 rounded-3xl text-sm outline-none" 
-                      placeholder="Detail the issue..." 
-                      value={issueData.desc} 
-                      onChange={(e) => setIssueData({...issueData, desc: e.target.value})} 
-                    />
+                    <textarea rows="4" className="w-full p-5 bg-slate-50 border border-slate-100 rounded-3xl text-sm outline-none focus:ring-2 ring-rose-500/10" placeholder="Explain the problem to the creator..." value={issueData.desc} onChange={(e) => setIssueData({...issueData, desc: e.target.value})} />
 
-                    <button 
-                      disabled={!issueData.desc} 
-                      onClick={() => handleUpdateStatus(selectedSection.id, 'Issue Logged')} 
-                      className="w-full py-5 bg-rose-50 text-rose-600 rounded-2xl font-black hover:bg-rose-600 hover:text-white disabled:opacity-30 transition-all"
-                    >
-                      Submit Revision
+                    <button disabled={!issueData.desc} onClick={() => handleUpdateStatus(selectedSection.id, 'Issue Logged')} className="w-full py-5 bg-rose-50 text-rose-600 rounded-2xl font-black hover:bg-rose-600 hover:text-white disabled:opacity-30 transition-all active:scale-95">
+                      Send to Creator
                     </button>
                   </section>
                 </div>
@@ -338,7 +305,7 @@ export function Tester({ onLogout }) {
   );
 }
 
-// Helper Functions - Matching "Old" Design
+// Helper Components
 function StatusCard({ label, count, icon, color }) {
   return (
     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
@@ -353,10 +320,7 @@ function StatusCard({ label, count, icon, color }) {
 
 function SidebarItem({ icon, label, active, onClick, count }) {
   return (
-    <button 
-      onClick={onClick} 
-      className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all ${active ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-800/50'}`}
-    >
+    <button onClick={onClick} className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all ${active ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-800/50'}`}>
       <div className="flex items-center gap-3 font-bold text-sm uppercase tracking-tight">{icon} {label}</div>
       {count !== undefined && <span className="text-[10px] font-black bg-slate-900 px-2 py-1 rounded-lg border border-slate-700">{count}</span>}
     </button>

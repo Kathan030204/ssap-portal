@@ -22,7 +22,7 @@ export function Creator({ onLogout }) {
   const [file, setFile] = useState(null);
   const [statusFilter, setStatusFilter] = useState('All');
 
-  // FIXED: Identity state initialized from local session
+  // --- IDENTITY STATE ---
   const [user, setUser] = useState({ id: null, name: '', role: '', loggedIn: false });
 
   // --- NOTIFICATION STATE ---
@@ -31,29 +31,31 @@ export function Creator({ onLogout }) {
   const notifRef = useRef(null);
 
   useEffect(() => {
-    const savedUser = JSON.parse(localStorage.getItem('user'));
+    // FIX: Changed from localStorage to sessionStorage to match your login system
+    const savedUser = JSON.parse(sessionStorage.getItem('user'));
     
     if (savedUser) {
       setUser({ 
         id: savedUser.id, 
-        name: savedUser.username, 
+        name: savedUser.username || savedUser.name, 
         role: savedUser.role, 
         loggedIn: true 
       });
       
       fetchSections(savedUser.id);
     } else {
-      onLogout(); 
+      onLogout(); // Redirect to login if no session found
     }
     
     const interval = setInterval(() => {
-        const currentUser = JSON.parse(localStorage.getItem('user'));
+        const currentUser = JSON.parse(sessionStorage.getItem('user'));
         if (currentUser) fetchSections(currentUser.id);
-    }, 30000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, []);
 
+  // Handle clicking outside notifications
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotifDropdown(false);
@@ -65,10 +67,8 @@ export function Creator({ onLogout }) {
   // --- API FETCHING ---
   const fetchSections = async (userId) => {
     try {
-      // Logic Fix: Explicitly request only sections belonging to this creator
       const response = await api.get(`/sections?creator_id=${userId}`);
-      
-      // Ensure we only keep data where creator_id matches (Safety check for backend)
+      // Safety filter: ensure we only show items belonging to this user
       const mySections = response.data.filter(s => s.creator_id === userId);
       setSections(mySections);
 
@@ -115,7 +115,6 @@ export function Creator({ onLogout }) {
     data.append('category', formData.category);
     data.append('docs', formData.docs);
     data.append('current_status', 'In Testing');
-    
     data.append('creator_id', user.id); 
 
     if (file) data.append('zip_file', file);
@@ -140,8 +139,7 @@ export function Creator({ onLogout }) {
     }
   };
 
-  // --- STATISTICS CALCULATIONS ---
-  // These will now automatically only count sections belonging to the logged-in user
+  // --- STATISTICS ---
   const stats = {
     total: sections.length,
     testing: sections.filter(s => s.current_status === 'In Testing').length,
@@ -149,12 +147,9 @@ export function Creator({ onLogout }) {
     passed: sections.filter(s => s.current_status === 'Published').length,
   };
 
-  // Logic: Displaying filtered lists
   const filteredSections = sections.filter(sec => {
     if (statusFilter === 'All') return true;
-    // In Review tab shows only THIS user's sections currently with testers
     if (statusFilter === 'In Review') return sec.current_status === 'In Testing';
-    // Fix Required tab shows only THIS user's sections where tester sent issue logged
     if (statusFilter === 'Fix Required') return sec.current_status === 'Issue Logged';
     if (statusFilter === 'Published') return sec.current_status === 'Published';
     return true;
@@ -187,6 +182,7 @@ export function Creator({ onLogout }) {
           </button>
         </nav>
 
+        {/* --- USER PROFILE (FIXED) --- */}
         <div className="p-4 border-t border-slate-800 bg-slate-950/30">
           {user.loggedIn && (
             <div className="space-y-3">
@@ -242,6 +238,7 @@ export function Creator({ onLogout }) {
 
           {activeTab === 'inventory' ? (
             <>
+              {/* --- STAT CARDS --- */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
                 {[{ label: 'All', val: stats.total, icon: <FaLayerGroup />, color: 'text-slate-600', bg: 'bg-white' }, 
                   { label: 'In Review', val: stats.testing, icon: <FaFlask />, color: 'text-amber-600', bg: 'bg-amber-50' }, 
@@ -258,6 +255,7 @@ export function Creator({ onLogout }) {
                 ))}
               </div>
 
+              {/* --- INVENTORY LIST --- */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-8">
                   <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -271,14 +269,14 @@ export function Creator({ onLogout }) {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {filteredSections.map((sec) => (
+                          {filteredSections.length > 0 ? filteredSections.map((sec) => (
                             <tr key={sec.id} className="group hover:bg-slate-50 transition">
                               <td className="px-6 py-5">
                                 <span className="text-[9px] font-black text-indigo-500 block">ID: #{sec.id}</span>
                                 <span className="font-bold text-slate-800">{sec.title}</span>
                               </td>
                               <td className="px-6 py-5 text-center">
-                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${sec.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-600'}`}>{sec.current_status}</span>
+                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${sec.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600' : sec.current_status === 'Published' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-600'}`}>{sec.current_status}</span>
                               </td>
                               <td className="px-6 py-5 text-right flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition">
                                 {sec.current_status === 'Issue Logged' && (
@@ -287,13 +285,16 @@ export function Creator({ onLogout }) {
                                 <button onClick={() => setSelectedIssue(sec)} className="p-2 text-slate-400 hover:text-indigo-600"><FaEye /></button>
                               </td>
                             </tr>
-                          ))}
+                          )) : (
+                            <tr><td colSpan="3" className="p-10 text-center text-slate-400 italic text-sm">No assets found in this category.</td></tr>
+                          )}
                         </tbody>
                       </table>
                     )}
                   </div>
                 </div>
 
+                {/* --- INSPECTOR PANEL --- */}
                 <div className="lg:col-span-4">
                   <div className="bg-white rounded-2xl border border-slate-200 p-6 sticky top-10">
                     {selectedIssue ? (
@@ -302,16 +303,18 @@ export function Creator({ onLogout }) {
                           <h3 className="font-black text-slate-800 uppercase italic">Inspector</h3>
                           <button onClick={() => setSelectedIssue(null)} className="text-slate-300"><FaTimes /></button>
                         </div>
+                        <div className="pb-4 border-b border-slate-100">
+                           <p className="text-[10px] font-black text-slate-400 uppercase">Asset Name</p>
+                           <p className="font-bold text-slate-800">{selectedIssue.title}</p>
+                        </div>
                         {selectedIssue.current_status === 'Issue Logged' ? (
                           <div className="space-y-4">
-                            {selectedIssue.issues?.map((issue, i) => (
-                              <div key={i} className="p-4 bg-rose-50 rounded-xl border-l-4 border-rose-500">
-                                <p className="text-[10px] font-black text-rose-500 uppercase">{issue.severity} Severity</p>
-                                <p className="text-sm text-slate-600 italic">"{issue.description}"</p>
-                              </div>
-                            ))}
+                            <p className="text-[10px] font-black text-rose-500 uppercase">Tester Notes</p>
+                            <div className="p-4 bg-rose-50 rounded-xl border-l-4 border-rose-500">
+                              <p className="text-sm text-slate-600 italic">"{selectedIssue.notes || 'No description provided'}"</p>
+                            </div>
                           </div>
-                        ) : <p className="text-sm text-slate-400 italic">No defects reported for this asset.</p>}
+                        ) : <p className="text-sm text-slate-400 italic text-center py-10">No defects reported for this asset.</p>}
                       </div>
                     ) : <div className="text-center py-24 text-slate-300 italic">Select an asset to inspect.</div>}
                   </div>
@@ -319,6 +322,7 @@ export function Creator({ onLogout }) {
               </div>
             </>
           ) : (
+            /* --- SUBMISSION FORM --- */
             <div className="max-w-3xl mx-auto py-10">
               <form onSubmit={handleSubmission} className="bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
                 <div className={`${isEditing ? 'bg-amber-500' : 'bg-slate-900'} p-8 text-white`}>
@@ -327,23 +331,29 @@ export function Creator({ onLogout }) {
                   </h2>
                 </div>
                 <div className="p-8 space-y-6">
-                  <input required placeholder="Asset Name" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold bg-slate-50 outline-none focus:border-indigo-500" />
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block">Asset Title</label>
+                    <input required placeholder="e.g. Navigation Header V2" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm font-bold bg-slate-50 outline-none focus:border-indigo-500" />
+                  </div>
                   
-                  <div className="p-6 rounded-2xl border-2 border-indigo-100 border-dashed bg-indigo-50/30 flex justify-between items-center">
-                    <div className="flex items-center gap-3 text-indigo-900">
-                      <FaUpload className="text-indigo-400" />
-                      <span className="text-sm font-black italic">{file ? file.name : "CHOOSE ZIP FILE"}</span>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block">Package File (.zip)</label>
+                    <div className="p-6 rounded-2xl border-2 border-indigo-100 border-dashed bg-indigo-50/30 flex justify-between items-center">
+                      <div className="flex items-center gap-3 text-indigo-900">
+                        <FaUpload className="text-indigo-400" />
+                        <span className="text-sm font-black italic">{file ? file.name : "CHOOSE ZIP FILE"}</span>
+                      </div>
+                      <label className="bg-indigo-600 text-white px-6 py-2 rounded-xl text-xs font-black cursor-pointer shadow-lg hover:bg-indigo-700">
+                        UPLOAD
+                        <input type="file" className="hidden" accept=".zip" onChange={(e) => setFile(e.target.files[0])} />
+                      </label>
                     </div>
-                    <label className="bg-indigo-600 text-white px-6 py-2 rounded-xl text-xs font-black cursor-pointer shadow-lg hover:bg-indigo-700">
-                      UPLOAD
-                      <input type="file" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
-                    </label>
                   </div>
                   
                   <div className="flex justify-end gap-6 pt-4 items-center">
-                    <button type="button" onClick={() => setActiveTab('inventory')} className="text-xs font-black text-slate-400 uppercase">Discard</button>
+                    <button type="button" onClick={() => setActiveTab('inventory')} className="text-xs font-black text-slate-400 uppercase hover:text-rose-500 transition">Discard</button>
                     <button type="submit" disabled={submitting} className="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black text-sm uppercase shadow-xl hover:bg-indigo-700 disabled:bg-slate-300">
-                      {submitting ? 'PROCESSING...' : 'Submit to QA'}
+                      {submitting ? 'PROCESSING...' : (isEditing ? 'Submit Revision' : 'Submit to QA')}
                     </button>
                   </div>
                 </div>
