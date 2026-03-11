@@ -26,7 +26,7 @@ class DesignController extends Controller
         $request->validate([
             'section_id' => 'required|integer',
             'image_type' => 'required|string|max:255',
-            'image_url'  => 'required|image|mimes:jpeg,png,webp,jpg|max:5120', // Max 5MB
+            'image_url'  => 'required|image|mimes:jpeg,png,webp,jpg,mp4,mov,gif', 
         ]);
 
         try {
