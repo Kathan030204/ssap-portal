@@ -83,19 +83,19 @@ export function Admin({ onLogout }) {
     const handleStatusUpdate = async (id, newStatus) => {
         const isRollback = newStatus === 'Issue Logged';
         const msg = isRollback ? "Rollback section? This will pull it from the live view." : "Push to LIVE?";
-        
+
         if (!window.confirm(msg)) return;
-        
+
         try {
             // If rolling back, we often want to clear the tester so it can be re-assigned
-            const payload = isRollback 
-                ? { current_status: newStatus, tester_id: null } 
+            const payload = isRollback
+                ? { current_status: newStatus, tester_id: null }
                 : { current_status: newStatus };
 
             await api.put(`/sections/${id}`, payload);
             await fetchInitialData(); // Refresh UI
-        } catch { 
-            alert("Update failed. Please check server connection."); 
+        } catch {
+            alert("Update failed. Please check server connection.");
         }
     };
 
@@ -117,17 +117,47 @@ export function Admin({ onLogout }) {
         } catch { alert("Delete failed."); }
     };
 
-    const handleDownload = async (fileName) => {
+    // React side (ensure this matches your route)
+    const handleDownload = async (sectionId, title) => {
         try {
-            const response = await api.get(`/sections`, { responseType: 'blob' });
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const response = await api.get(`/sections/${sectionId}/download`, {
+                responseType: 'blob', // Critical for binary files
+            });
+
+            // 1. Check if the response is actually JSON (means an error happened)
+            if (response.data.type === 'application/json') {
+                const text = await response.data.text();
+                const error = JSON.parse(text);
+                alert("Error: " + error.message);
+                return;
+            }
+
+            // 2. Get the file extension from the original zip_url path 
+            // We find the section from our state to get the actual extension
+            const section = sections.find(s => s.id === sectionId);
+            const originalFileName = section?.zip_url ? section.zip_url.split('/').pop() : 'file.zip';
+            const extension = originalFileName.split('.').pop();
+
+            // 3. Create Blob and Download
+            const blob = new Blob([response.data], { type: response.headers['content-type'] });
+            const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
+
             link.href = url;
-            link.setAttribute('download', fileName || 'asset.zip');
+            // This ensures if it was a .png, it downloads as a .png
+            const cleanTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            link.setAttribute('download', `${cleanTitle}.${extension}`);
+
             document.body.appendChild(link);
             link.click();
-            link.remove();
-        } catch { alert("Download failed."); }
+
+            // Cleanup
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Download Error:", err);
+            alert("Server connection failed.");
+        }
     };
 
     const testers = accounts.filter(acc => acc.role === 'tester');
@@ -264,6 +294,7 @@ export function Admin({ onLogout }) {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
+                                            {/* Inside the repository table tbody */}
                                             {sections.map(sec => (
                                                 <tr key={sec.id} className="hover:bg-slate-50 transition-colors">
                                                     <td className="px-6 py-4 text-xs font-mono text-slate-400">SEC-{sec.id}</td>
@@ -274,7 +305,13 @@ export function Admin({ onLogout }) {
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 text-right text-blue-600 font-bold">
-                                                        <button onClick={() => handleDownload('asset.zip')}><FaDownload /></button>
+                                                        <button
+                                                            onClick={() => handleDownload(sec.id, sec.title)}
+                                                            className="hover:text-blue-800 transition-colors p-2"
+                                                            title="Download Asset"
+                                                        >
+                                                            <FaDownload />
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -295,7 +332,7 @@ export function Admin({ onLogout }) {
                                                 <div className="flex justify-between items-start mb-6">
                                                     <div>
                                                         <h3 className="text-xl font-black">{sec.title}</h3>
-                                                        <p className="text-slate-400 text-sm">Deployment: 
+                                                        <p className="text-slate-400 text-sm">Deployment:
                                                             <span className={`font-bold ml-2 ${sec.current_status === 'Issue Logged' ? 'text-rose-600' : 'text-indigo-600'}`}>
                                                                 {sec.current_status}
                                                             </span>
@@ -303,8 +340,8 @@ export function Admin({ onLogout }) {
                                                     </div>
                                                     <div className="flex gap-2">
                                                         {sec.current_status === 'Published' ? (
-                                                            <button 
-                                                                onClick={() => handleStatusUpdate(sec.id, 'Issue Logged')} 
+                                                            <button
+                                                                onClick={() => handleStatusUpdate(sec.id, 'Issue Logged')}
                                                                 className="bg-rose-100 text-rose-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-rose-200"
                                                             >
                                                                 <FaUndo /> Emergency Rollback
@@ -314,8 +351,8 @@ export function Admin({ onLogout }) {
                                                                 <FaTimes /> Rolled Back
                                                             </span>
                                                         ) : (
-                                                            <button 
-                                                                onClick={() => handleStatusUpdate(sec.id, 'Published')} 
+                                                            <button
+                                                                onClick={() => handleStatusUpdate(sec.id, 'Published')}
                                                                 className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black flex items-center gap-2 hover:bg-emerald-700 shadow-lg shadow-emerald-200"
                                                             >
                                                                 <FaRocket /> Publish to Store

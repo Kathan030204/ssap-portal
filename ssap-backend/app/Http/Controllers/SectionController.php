@@ -6,6 +6,7 @@ use App\Models\Section;
 use App\Models\Testing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage; // Add this at the top with other imports
 
 class SectionController extends Controller
 {
@@ -103,4 +104,28 @@ class SectionController extends Controller
         $section->delete();
         return response()->json(['message' => 'Section deleted successfully'], 200);
     }
+
+    public function download($id) {
+    $section = Section::find($id);
+
+    if (!$section || !$section->zip_url) {
+        return response()->json(['message' => 'File path not found'], 404);
+    }
+
+    if (!Storage::disk('local')->exists($section->zip_url)) {
+        return response()->json(['message' => 'File missing on server'], 404);
+    }
+
+    // Get original mime type (e.g., application/zip or image/png)
+    $mimeType = Storage::disk('local')->mimeType($section->zip_url);
+    $path = Storage::disk('local')->path($section->zip_url);
+
+    // Clean buffer to prevent corruption
+    if (ob_get_level()) ob_end_clean();
+
+    return response()->download($path, basename($section->zip_url), [
+        'Content-Type' => $mimeType,
+        'Access-Control-Expose-Headers' => 'Content-Disposition'
+    ]);
+}
 }

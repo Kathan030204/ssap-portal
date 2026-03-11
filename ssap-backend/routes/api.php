@@ -26,3 +26,6 @@ Route::post('/design', [DesignController::class, 'store']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user-data', [UserController::class, 'index']);
 });
+
+// Route for downloading a section file
+Route::get('/sections/{id}/download', [SectionController::class, 'download']);
