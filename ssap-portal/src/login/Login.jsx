@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  FaUserEdit, FaVial, FaPaintBrush, FaUserShield, 
-  FaArrowRight, FaFingerprint, FaKey, FaArrowLeft 
+import {
+  FaUserEdit, FaVial, FaPaintBrush, FaUserShield,
+  FaArrowRight, FaFingerprint, FaKey, FaArrowLeft
 } from 'react-icons/fa';
 import { Creator } from '../creator/Creator';
 import { Tester } from '../tester/Tester';
@@ -10,13 +10,13 @@ import { Admin } from '../admin/Admin';
 
 export function Login() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState(""); 
-  const [isResetMode, setIsResetMode] = useState(false); 
+  const [userRole, setUserRole] = useState("");
+  const [isResetMode, setIsResetMode] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedChip, setSelectedChip] = useState(""); 
+  const [selectedChip, setSelectedChip] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [newPassword, setNewPassword] = useState(""); 
+  const [newPassword, setNewPassword] = useState("");
 
   const roles = [
     { id: 'creator', icon: <FaUserEdit />, color: 'text-blue-500' },
@@ -26,7 +26,6 @@ export function Login() {
   ];
 
   useEffect(() => {
-    // USING sessionStorage instead of localStorage for multi-tab support
     const savedData = sessionStorage.getItem('user');
     if (savedData) {
       try {
@@ -57,7 +56,6 @@ export function Login() {
       const data = await response.json();
 
       if (response.ok) {
-        // Save to sessionStorage so this TAB has its own user
         sessionStorage.setItem('user', JSON.stringify({
           id: data.user.id,
           username: data.user.username,
@@ -71,6 +69,46 @@ export function Login() {
       }
     } catch {
       alert("Could not connect to the server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * NEW LOGIC: handleResetPassword
+   * Sends the new password and email to the backend
+   */
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!email || !newPassword) {
+      alert("Please fill in all fields.");
+      return;
+    }
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:8000/api/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        // CHANGE THIS LINE: mapping 'newPassword' state to 'password' key
+        body: JSON.stringify({
+          email: email,
+          password: newPassword  // Changed from newPassword: newPassword
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("Password updated successfully! Please sign in.");
+        setIsResetMode(false);
+        setNewPassword("");
+      } else {
+        // This is where you were seeing "The password field is required."
+        alert(data.message || "Failed to update password.");
+      }
+    } catch {
+      alert("Error connecting to server.");
     } finally {
       setLoading(false);
     }
@@ -118,11 +156,10 @@ export function Login() {
                   key={role.id}
                   type="button"
                   onClick={() => setSelectedChip(role.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all ${
-                    selectedChip === role.id
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all ${selectedChip === role.id
                       ? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105'
                       : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                  }`}
+                    }`}
                 >
                   <span className={selectedChip === role.id ? 'text-white' : role.color}>{role.icon}</span>
                   <span className="capitalize">{role.id}</span>
@@ -143,13 +180,18 @@ export function Login() {
             </div>
           </form>
         ) : (
-          <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-             <div className="space-y-2">
-               <input type="email" placeholder="Confirm registered email" className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none text-sm" value={email} onChange={(e) => setEmail(e.target.value)} required />
-               <input type="password" placeholder="New Password" className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none text-sm" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
-             </div>
-             <button type="submit" className="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95">Update Password</button>
-             <button type="button" onClick={() => setIsResetMode(false)} className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-500 py-2 hover:text-slate-800"><FaArrowLeft size={10} /> Back to Sign In</button>
+          /* RESET PASSWORD FORM - Now connected to handleResetPassword */
+          <form onSubmit={handleResetPassword} className="space-y-6">
+            <div className="space-y-2">
+              <input type="email" placeholder="Confirm registered email" className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none text-sm focus:ring-2 focus:ring-indigo-500/20" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <input type="password" placeholder="New Password" className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none text-sm focus:ring-2 focus:ring-indigo-500/20" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+            </div>
+            <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 disabled:opacity-50 transition-all">
+              {loading ? "Updating..." : "Update Password"}
+            </button>
+            <button type="button" onClick={() => { setIsResetMode(false); setEmail(""); }} className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-500 py-2 hover:text-slate-800 transition-colors">
+              <FaArrowLeft size={10} /> Back to Sign In
+            </button>
           </form>
         )}
       </div>
