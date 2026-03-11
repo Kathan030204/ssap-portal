@@ -26,12 +26,15 @@ export function Creator({ onLogout }) {
   const notifRef = useRef(null);
 
   // --- API FETCHING ---
+  // Optimized to handle the "selectedIssue" state correctly during background polling
   const fetchSections = useCallback(async (userId) => {
+    if (!userId) return;
     try {
       const response = await api.get(`/sections?creator_id=${userId}`);
       const mySections = response.data.filter(s => s.creator_id === userId);
       setSections(mySections);
 
+      // Handle Notifications
       const issueAlerts = mySections
         .filter(s => s.current_status === 'Issue Logged')
         .map(s => ({
@@ -42,39 +45,38 @@ export function Creator({ onLogout }) {
         }));
       setNotifications(issueAlerts);
 
-      if (selectedIssue) {
-        const liveUpdate = mySections.find(s => s.id === selectedIssue.id);
-        if (liveUpdate && liveUpdate.current_status === 'Issue Logged') {
-          setSelectedIssue(liveUpdate);
-        } else {
-          setSelectedIssue(null);
-        }
-      }
+      // LIVE UPDATE LOGIC:
+      // Use functional state update to see if the panel is CURRENTLY open.
+      // This prevents the interval from re-opening a panel the user just closed.
+      setSelectedIssue(current => {
+        if (!current) return null; // If user closed it, keep it closed.
+        const updatedData = mySections.find(s => s.id === current.id);
+        // Only keep it open if it still exists and still requires a fix
+        return (updatedData && updatedData.current_status === 'Issue Logged') ? updatedData : null;
+      });
     } catch (error) {
       console.error("Fetch Error:", error);
     }
-  }, [selectedIssue]);
+  }, []); // Empty deps because we use functional state updates inside
 
   useEffect(() => {
     const savedUser = JSON.parse(sessionStorage.getItem('user'));
     if (savedUser) {
+      const uid = savedUser.id;
       setUser({
-        id: savedUser.id,
+        id: uid,
         name: savedUser.username || savedUser.name,
         role: savedUser.role,
         loggedIn: true
       });
-      fetchSections(savedUser.id);
+      fetchSections(uid);
+
+      // Background polling
+      const interval = setInterval(() => fetchSections(uid), 5000);
+      return () => clearInterval(interval);
     } else {
       onLogout();
     }
-
-    const interval = setInterval(() => {
-      const currentUser = JSON.parse(sessionStorage.getItem('user'));
-      if (currentUser) fetchSections(currentUser.id);
-    }, 5000);
-
-    return () => clearInterval(interval);
   }, [onLogout, fetchSections]);
 
   useEffect(() => {
@@ -152,24 +154,34 @@ export function Creator({ onLogout }) {
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-800">
 
       {/* SIDEBAR */}
-      <div className="w-64 bg-slate-900 text-slate-300 flex flex-col sticky top-0 h-screen">
+      <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col sticky top-0 h-screen">
         <div className="p-6 border-b border-slate-800">
           <h1 className="text-xl font-black text-white tracking-tighter italic">CREATOR HUB</h1>
         </div>
 
         <nav className="flex-1 p-4 space-y-2 mt-4">
-          <button onClick={() => { setActiveTab('inventory'); setStatusFilter('All'); setSelectedIssue(null); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'inventory' && statusFilter === 'All' ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-500'}`}>
+          <button 
+            onClick={() => { setActiveTab('inventory'); setStatusFilter('All'); setSelectedIssue(null); }} 
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'inventory' && statusFilter === 'All' ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-500'}`}
+          >
             <FaHome size={18} /> Dashboard
           </button>
 
           <div className="pt-4 pb-2 px-4 text-[10px] font-black uppercase text-slate-600 tracking-widest">Pipeline</div>
           {['In Review', 'Fix Required', 'Published'].map((f) => (
-            <button key={f} onClick={() => { setActiveTab('inventory'); setStatusFilter(f); setSelectedIssue(null); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${statusFilter === f && activeTab === 'inventory' ? 'bg-slate-800 text-indigo-400' : 'hover:bg-slate-800 text-slate-500'}`}>
+            <button 
+              key={f} 
+              onClick={() => { setActiveTab('inventory'); setStatusFilter(f); setSelectedIssue(null); }} 
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${statusFilter === f && activeTab === 'inventory' ? 'bg-slate-800 text-indigo-400' : 'hover:bg-slate-800 text-slate-500'}`}
+            >
               {f === 'In Review' ? <FaFlask /> : f === 'Fix Required' ? <FaBug /> : <FaCheckCircle />} {f}
             </button>
           ))}
 
-          <button onClick={() => { setActiveTab('submit'); setIsEditing(null); setSelectedIssue(null); }} className="mt-4 w-full flex items-center gap-3 px-4 py-3 rounded-xl font-black text-xs uppercase bg-white text-slate-900 hover:bg-indigo-50 transition-all">
+          <button 
+            onClick={() => { setActiveTab('submit'); setIsEditing(null); setSelectedIssue(null); }} 
+            className="mt-4 w-full flex items-center gap-3 px-4 py-3 rounded-xl font-black text-xs uppercase bg-white text-slate-900 hover:bg-indigo-50 transition-all"
+          >
             <FaPlus /> New Asset
           </button>
         </nav>
@@ -186,7 +198,7 @@ export function Creator({ onLogout }) {
             <FaSignOutAlt size={12} /> Sign Out
           </button>
         </div>
-      </div>
+      </aside>
 
       {/* MAIN CONTENT */}
       <main className="flex-1 p-10 overflow-y-auto">
@@ -204,6 +216,7 @@ export function Creator({ onLogout }) {
             {showNotifDropdown && (
               <div className="absolute right-0 top-full mt-4 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 z-50">
                 <h4 className="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-4">Urgent Attention</h4>
+                {notifications.length === 0 && <p className="text-xs text-slate-400 italic">No new issues logged.</p>}
                 {notifications.map(n => (
                   <div key={n.id} onClick={() => handleNotifClick(n.id)} className="p-4 rounded-2xl bg-rose-50 border border-rose-100 mb-2 cursor-pointer hover:bg-rose-500 group transition-all">
                     <p className="text-xs font-black text-rose-900 group-hover:text-white">{n.title}</p>
@@ -257,7 +270,7 @@ export function Creator({ onLogout }) {
                           {sec.current_status === 'Issue Logged' && (
                             <button 
                               onClick={(e) => { e.stopPropagation(); startReupload(sec); }} 
-                              className="p-2 bg-slate-700 text-white rounded-lg shadow-lg"
+                              className="p-2 bg-slate-700 text-white rounded-lg shadow-lg text-[10px] font-bold uppercase"
                             >
                               Fix Issues
                             </button>
@@ -271,7 +284,7 @@ export function Creator({ onLogout }) {
               </div>
             </div>
 
-            {/* Issue Viewer: ONLY renders if statusFilter is 'Fix Required' */}
+            {/* Issue Viewer */}
             {statusFilter === 'Fix Required' && (
               <div className="col-span-4">
                 <div className="bg-white rounded-3xl border border-slate-200 p-8 sticky top-10 shadow-sm min-h-100">
@@ -279,7 +292,14 @@ export function Creator({ onLogout }) {
                     <div className="space-y-6">
                       <div className="flex justify-between items-start">
                         <h3 className="font-black text-slate-900 italic uppercase">Issue Logged Viewer</h3>
-                        <button onClick={() => setSelectedIssue(null)} className="text-slate-300 hover:text-slate-900"><FaTimes /></button>
+                        {/* THE BUTTON THAT WAS BROKEN */}
+                        <button 
+                          type="button"
+                          onClick={() => setSelectedIssue(null)} 
+                          className="text-slate-300 hover:text-slate-900 p-1 transition-colors"
+                        >
+                          <FaTimes size={18} />
+                        </button>
                       </div>
 
                       <div className="pb-4 border-b border-slate-100">
