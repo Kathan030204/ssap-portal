@@ -4,7 +4,7 @@ import {
   FaPalette, FaImage, FaDesktop, FaMobileAlt,
   FaAd, FaSpinner, FaCloudUploadAlt, FaDownload,
   FaListUl, FaCheckCircle, FaLayerGroup, FaChartBar, FaStore, FaRocket, FaCheck,
-  FaUserCircle, FaSignOutAlt, FaBell
+  FaUserCircle, FaSignOutAlt, FaBell, FaTimes
 } from 'react-icons/fa';
 
 const api = axios.create({ baseURL: 'http://localhost:8000/api' });
@@ -23,13 +23,13 @@ export function Designer({ onLogout }) {
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifRef = useRef(null);
 
+  // CHANGED: Initialized as arrays to support multiple files
   const [pendingAssets, setPendingAssets] = useState({
-    desktop: null,
-    mobile: null,
-    banner: null
+    desktop: [],
+    mobile: [],
+    banner: []
   });
 
-  // Handle clicking outside the notification bell
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotifDropdown(false);
@@ -44,7 +44,6 @@ export function Designer({ onLogout }) {
       const allSections = response.data;
       setSections(allSections);
 
-      // Filter sections that are 'QA Passed' for notifications
       const readyForDesign = allSections.filter(s => s.current_status === 'QA Passed');
       const alerts = readyForDesign.map(s => ({
         id: s.id,
@@ -59,7 +58,6 @@ export function Designer({ onLogout }) {
   };
 
   useEffect(() => {
-    // 1. Initialize User Data from Storage
     const storedUser = sessionStorage.getItem('user') || localStorage.getItem('user');
     if (storedUser) {
       const savedUser = JSON.parse(storedUser);
@@ -69,17 +67,14 @@ export function Designer({ onLogout }) {
         role: savedUser.role || "Designer"
       });
     }
-
-    // 2. Initial Data Fetch
     fetchDesignTasks();
-
-    // 3. Auto-refresh
     const interval = setInterval(fetchDesignTasks, 30000);
     return () => clearInterval(interval);
   }, []);
 
+  // CHANGED: Reset to empty arrays
   useEffect(() => {
-    setPendingAssets({ desktop: null, mobile: null, banner: null });
+    setPendingAssets({ desktop: [], mobile: [], banner: [] });
   }, [selectedSectionId]);
 
   const handleNotifClick = (sectionId) => {
@@ -98,7 +93,9 @@ export function Designer({ onLogout }) {
   };
 
   const displaySections = sections.filter(s => {
-    if (viewFilter === 'all') return true;
+    if (viewFilter === 'all') {
+        return s.current_status === 'QA Passed' || s.current_status === 'Published';
+    }
     if (viewFilter === 'passed') return s.current_status === 'QA Passed';
     if (viewFilter === 'ready') return s.current_status === 'Ready for Store';
     if (viewFilter === 'published') return s.current_status === 'Published';
@@ -108,35 +105,54 @@ export function Designer({ onLogout }) {
   const showPipeline = viewFilter === 'all' || viewFilter === 'passed';
 
   const stats = {
-    total: sections.length,
+    total: sections.filter(s => s.current_status === 'QA Passed' || s.current_status === 'Published').length,
     passed: sections.filter(s => s.current_status === 'QA Passed').length,
     completed: sections.filter(s => ['Published', 'Ready for Store'].includes(s.current_status)).length
   };
 
   const selectedSection = sections.find(s => s.id === selectedSectionId);
 
+  // CHANGED: Appends new files to the array instead of replacing
   const handleFileSelect = (e, assetType) => {
-    const file = e.target.files[0];
-    if (file) setPendingAssets(prev => ({ ...prev, [assetType]: file }));
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      setPendingAssets(prev => ({ 
+        ...prev, 
+        [assetType]: [...prev[assetType], ...files] 
+      }));
+    }
+    e.target.value = null; // Reset input
   };
 
+  const removeFile = (assetType, index) => {
+    setPendingAssets(prev => ({
+      ...prev,
+      [assetType]: prev[assetType].filter((_, i) => i !== index)
+    }));
+  };
+
+  // CHANGED: Loops through all arrays to upload every file
   const handleFinalSubmit = async () => {
-    if (!pendingAssets.desktop && !pendingAssets.mobile && !pendingAssets.banner) {
+    const totalFiles = [...pendingAssets.desktop, ...pendingAssets.mobile, ...pendingAssets.banner].length;
+    if (totalFiles === 0) {
       alert("Please select at least one asset to upload.");
       return;
     }
     setLoading(true);
     try {
-      const uploadPromises = Object.entries(pendingAssets).map(([type, file]) => {
-        if (!file) return null;
-        const formData = new FormData();
-        formData.append('image_url', file);
-        formData.append('section_id', selectedSectionId);
-        formData.append('image_type', type);
-        return api.post('/design', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+      const uploadPromises = [];
+      
+      Object.entries(pendingAssets).forEach(([type, files]) => {
+        files.forEach(file => {
+          const formData = new FormData();
+          formData.append('image_url', file);
+          formData.append('section_id', selectedSectionId);
+          formData.append('image_type', type);
+          uploadPromises.push(api.post('/design', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          }));
         });
-      }).filter(p => p !== null);
+      });
 
       await Promise.all(uploadPromises);
       await api.put(`/sections/${selectedSectionId}`, { current_status: 'Ready for Store' });
@@ -153,13 +169,10 @@ export function Designer({ onLogout }) {
 
   const handleDownload = async (sectionId, title) => {
     try {
-      const response = await api.get(`/sections/${sectionId}/download`, {
-        responseType: 'blob',
-      });
+      const response = await api.get(`/sections/${sectionId}/download`, { responseType: 'blob' });
       const section = sections.find(s => s.id === sectionId);
       const originalFileName = section?.zip_url ? section.zip_url.split('/').pop() : 'file.zip';
       const extension = originalFileName.split('.').pop();
-
       const blob = new Blob([response.data], { type: response.headers['content-type'] });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -176,12 +189,10 @@ export function Designer({ onLogout }) {
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-      {/* SIDEBAR */}
       <aside className="w-64 bg-slate-900 text-white flex flex-col shrink-0 fixed h-full z-20">
         <div className="p-8 text-xl font-black italic flex items-center gap-3 border-b border-slate-800">
           <FaPalette className="text-indigo-400" /> Designer Hub
         </div>
-
         <nav className="flex-1 px-4 py-6 space-y-1">
           <p className="text-[10px] font-black text-slate-500 uppercase px-4 mb-2 tracking-widest">Workflow</p>
           <button onClick={() => { setViewFilter('all'); setSelectedSectionId(null); }}
@@ -204,8 +215,6 @@ export function Designer({ onLogout }) {
             </button>
           </div>
         </nav>
-
-        {/* LOGGED IN USER SECTION */}
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
             <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 border border-indigo-500/30 font-black">
@@ -222,7 +231,6 @@ export function Designer({ onLogout }) {
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
       <main className="flex-1 ml-64 p-10">
         <div className="max-w-7xl mx-auto">
           <header className="flex justify-between items-start mb-10">
@@ -230,38 +238,28 @@ export function Designer({ onLogout }) {
               <h2 className="text-4xl font-black text-slate-900 tracking-tight italic">Studio Pipeline</h2>
               <p className="text-slate-500 font-medium mt-1">Active User: <span className="text-indigo-600 font-bold">{currentUser.name}</span></p>
             </div>
-
             <div className="relative" ref={notifRef}>
               <button onClick={() => setShowNotifDropdown(!showNotifDropdown)}
                 className={`p-4 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 transition-all relative ${notifications.length > 0 ? 'shadow-xl shadow-indigo-100 border-indigo-100' : ''}`}>
                 <FaBell size={22} />
-                {notifications.length > 0 && (
-                  <span className="absolute top-3 right-3 w-3.5 h-3.5 bg-rose-500 border-2 border-white rounded-full animate-bounce"></span>
-                )}
+                {notifications.length > 0 && <span className="absolute top-3 right-3 w-3.5 h-3.5 bg-rose-500 border-2 border-white rounded-full animate-bounce"></span>}
               </button>
-
               {showNotifDropdown && (
                 <div className="absolute right-0 mt-4 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 z-50 overflow-hidden">
                   <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-4">QA Approvals</h4>
                   <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-                    {notifications.length > 0 ? (
-                      notifications.map(n => (
-                        <div key={n.id} onClick={() => handleNotifClick(n.id)}
-                          className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 group cursor-pointer hover:bg-indigo-600 transition-all">
-                          <p className="text-xs font-black text-indigo-900 group-hover:text-white leading-tight">{n.title}</p>
-                          <p className="text-[10px] font-bold text-indigo-400 group-hover:text-indigo-200 mt-1 uppercase italic">{n.msg}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-slate-400 italic text-sm text-center py-4">All caught up!</p>
-                    )}
+                    {notifications.length > 0 ? notifications.map(n => (
+                      <div key={n.id} onClick={() => handleNotifClick(n.id)} className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 group cursor-pointer hover:bg-indigo-600 transition-all">
+                        <p className="text-xs font-black text-indigo-900 group-hover:text-white leading-tight">{n.title}</p>
+                        <p className="text-[10px] font-bold text-indigo-400 group-hover:text-indigo-200 mt-1 uppercase italic">{n.msg}</p>
+                      </div>
+                    )) : <p className="text-slate-400 italic text-sm text-center py-4">All caught up!</p>}
                   </div>
                 </div>
               )}
             </div>
           </header>
 
-          {/* STATS CARDS */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <StatCard label="Master Library" val={stats.total} icon={<FaLayerGroup />} color="text-slate-400" />
             <StatCard label="Awaiting Assets" val={stats.passed} icon={<FaCheckCircle />} color="text-indigo-500" />
@@ -280,7 +278,7 @@ export function Designer({ onLogout }) {
                 </div>
               ) : (
                 displaySections.map((section) => (
-                  <div key={section.id} onClick={() => showPipeline && setSelectedSectionId(section.id)}
+                  <div key={section.id} onClick={() => showPipeline && setSelectedSectionId(section.current_status === 'QA Passed' ? section.id : null)}
                     className={`p-6 rounded-3xl border-2 transition-all bg-white flex justify-between items-center ${selectedSectionId === section.id ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-lg' : 'border-transparent shadow-sm'} ${showPipeline ? 'cursor-pointer hover:border-slate-300' : ''}`}>
                     <div className="flex gap-4 items-center">
                       <div className={`p-4 rounded-2xl ${selectedSectionId === section.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
@@ -318,16 +316,29 @@ export function Designer({ onLogout }) {
                         { id: 'mobile', icon: <FaMobileAlt />, label: 'Mobile (1080x1920)' },
                         { id: 'banner', icon: <FaAd />, label: 'Marketing Banner' }
                       ].map(asset => (
-                        <label key={asset.id} className={`group flex flex-col p-4 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${pendingAssets[asset.id] ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-200 hover:border-indigo-400'}`}>
-                          <div className="flex justify-between items-center">
-                            <span className={`text-[11px] font-black uppercase flex items-center gap-2 ${pendingAssets[asset.id] ? 'text-emerald-600' : 'text-slate-600'}`}>
-                              {asset.icon} {asset.label}
-                            </span>
-                            {pendingAssets[asset.id] ? <FaCheck className="text-emerald-500" /> : <FaCloudUploadAlt className="text-slate-300 group-hover:text-indigo-500" />}
-                          </div>
-                          {pendingAssets[asset.id] && <p className="text-[10px] text-emerald-600 mt-2 font-bold truncate">✓ {pendingAssets[asset.id].name}</p>}
-                          <input type="file" className="hidden" disabled={loading} onChange={(e) => handleFileSelect(e, asset.id)} />
-                        </label>
+                        <div key={asset.id} className="space-y-2">
+                            <label className={`group flex flex-col p-4 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${pendingAssets[asset.id].length > 0 ? 'border-indigo-300 bg-indigo-50/20' : 'border-slate-200 hover:border-indigo-400'}`}>
+                            <div className="flex justify-between items-center">
+                                <span className={`text-[11px] font-black uppercase flex items-center gap-2 ${pendingAssets[asset.id].length > 0 ? 'text-indigo-600' : 'text-slate-600'}`}>
+                                {asset.icon} {asset.label}
+                                </span>
+                                <FaCloudUploadAlt className="text-slate-300 group-hover:text-indigo-500" />
+                            </div>
+                            <input type="file" multiple className="hidden" disabled={loading} onChange={(e) => handleFileSelect(e, asset.id)} />
+                            </label>
+                            
+                            {/* List of files selected for this category */}
+                            <div className="flex flex-wrap gap-2">
+                                {pendingAssets[asset.id].map((file, idx) => (
+                                    <div key={idx} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg border border-emerald-100 text-[10px] font-bold">
+                                        <span className="truncate max-w-20">{file.name}</span>
+                                        <button onClick={() => removeFile(asset.id, idx)} className="text-rose-400 hover:text-rose-600">
+                                            <FaTimes size={10} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                       ))}
                       <button onClick={handleFinalSubmit} disabled={loading || selectedSection.current_status !== 'QA Passed'} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg hover:bg-indigo-700 disabled:bg-slate-200 transition-all mt-6 uppercase tracking-widest text-xs">
                         {loading ? <FaSpinner className="animate-spin mx-auto text-xl" /> : 'Finalize Package'}
@@ -351,7 +362,6 @@ export function Designer({ onLogout }) {
   );
 }
 
-// Helper Sub-component
 function StatCard({ label, val, icon, color }) {
   return (
     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
