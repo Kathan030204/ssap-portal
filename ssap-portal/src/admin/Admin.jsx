@@ -356,14 +356,16 @@ export function Admin({ onLogout }) {
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-400">
                                             <tr>
-                                                <th className="px-6 py-4">User</th>
-                                                <th className="px-6 py-4">Access Level</th>
+                                                <th className="px-6 py-4">User_ID</th>
+                                                <th className="px-6 py-4">User_Name</th>
+                                                <th className="px-6 py-4">Role</th>
                                                 <th className="px-6 py-4 text-right">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
                                             {accounts.map(acc => (
                                                 <tr key={acc.id} className="hover:bg-slate-50 transition-colors">
+                                                    <td className="px-6 py-4 font-bold text-slate-500">{acc.id}</td>
                                                     <td className="px-6 py-4 font-black">{acc.username}</td>
                                                     <td className="px-6 py-4 font-black text-[10px] text-indigo-600 uppercase">{acc.role}</td>
                                                     <td className="px-6 py-4 text-right">
