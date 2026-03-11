@@ -1,29 +1,29 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
-import { 
-  FaBug, FaCheckCircle, FaSearch, FaTimes, 
+import {
+  FaCheckCircle, FaSearch, FaTimes,
   FaSpinner, FaLayerGroup, FaHome,
   FaClock, FaCheckDouble, FaExclamationTriangle, FaListUl,
-  FaSignOutAlt, FaUserCircle, FaBell, FaTrashAlt, FaPlus 
+  FaSignOutAlt, FaUserCircle, FaBell, FaTrashAlt, FaPlus,FaDownload
 } from 'react-icons/fa';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api', 
+  baseURL: 'http://localhost:8000/api',
 });
 
 export function Tester({ onLogout }) {
   // --- UI & DATA STATES ---
-  const [activeFilter, setActiveFilter] = useState('all'); 
+  const [activeFilter, setActiveFilter] = useState('all');
   const [showReviewPanel, setShowReviewPanel] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   // --- ISSUE REPORT STATES ---
   const [issueData, setIssueData] = useState({ type: 'Bug', severity: 'Major', desc: '' });
-  const [reportIssues, setReportIssues] = useState([]); 
-  
+  const [reportIssues, setReportIssues] = useState([]);
+
   // --- IDENTITY & NOTIFICATIONS ---
   const [currentUser, setCurrentUser] = useState({ id: null, name: '', role: '' });
   const [notifications, setNotifications] = useState([]);
@@ -51,23 +51,23 @@ export function Tester({ onLogout }) {
       }
 
       const savedUser = JSON.parse(storedUser);
-      setCurrentUser({ 
-        id: savedUser.id, 
-        name: savedUser.username || savedUser.name, 
-        role: savedUser.role 
+      setCurrentUser({
+        id: savedUser.id,
+        name: savedUser.username || savedUser.name,
+        role: savedUser.role
       });
 
       const secRes = await api.get('/sections');
       const allData = secRes.data;
 
       // Filter logic: Tester sees their assigned items OR everything that is Published
-      const relevant = allData.filter(s => 
+      const relevant = allData.filter(s =>
         s.tester_id === savedUser.id || s.current_status === 'Published'
       );
 
       // Notification Logic: Check for newly assigned "In Testing" tasks
-      const newTasks = relevant.filter(s => 
-          s.tester_id === savedUser.id && s.current_status === 'In Testing'
+      const newTasks = relevant.filter(s =>
+        s.tester_id === savedUser.id && s.current_status === 'In Testing'
       );
 
       setNotifications(newTasks.map(task => ({
@@ -84,9 +84,9 @@ export function Tester({ onLogout }) {
     }
   }, [onLogout]);
 
-  useEffect(() => { 
-    fetchInitialData(); 
-    const interval = setInterval(fetchInitialData, 30000); 
+  useEffect(() => {
+    fetchInitialData();
+    const interval = setInterval(fetchInitialData, 30000);
     return () => clearInterval(interval);
   }, [fetchInitialData]);
 
@@ -94,7 +94,7 @@ export function Tester({ onLogout }) {
   const openReview = (section) => {
     setSelectedSection(section);
     setShowReviewPanel(true);
-    setReportIssues([]); 
+    setReportIssues([]);
     setIssueData({ type: 'Bug', severity: 'Major', desc: '' });
     // Remove notification for this specific item once opened
     setNotifications(prev => prev.filter(n => n.id !== section.id));
@@ -103,7 +103,7 @@ export function Tester({ onLogout }) {
   const addIssueToReport = () => {
     if (!issueData.desc.trim()) return;
     setReportIssues([...reportIssues, { ...issueData, id: Date.now() }]);
-    setIssueData({ type: 'Bug', severity: 'Major', desc: '' }); 
+    setIssueData({ type: 'Bug', severity: 'Major', desc: '' });
   };
 
   const removeIssueFromReport = (id) => {
@@ -116,7 +116,7 @@ export function Tester({ onLogout }) {
       if (newStatus === 'Issue Logged') {
         // Send a separate request for EVERY issue in the reportIssues list
         const promises = reportIssues.map(issue => {
-          return api.put(`/sections/${id}`, { 
+          return api.put(`/sections/${id}`, {
             current_status: 'Issue Logged',
             type: issue.type,
             severity: issue.severity,
@@ -130,14 +130,14 @@ export function Tester({ onLogout }) {
         alert(`Successfully logged ${reportIssues.length} individual issues.`);
       } else {
         // Single update for Approval
-        await api.put(`/sections/${id}`, { 
+        await api.put(`/sections/${id}`, {
           current_status: 'QA Passed',
           description: 'Approved',
           notes: 'QA Approval'
         });
         alert("Asset Approved!");
       }
-      
+
       fetchInitialData(); // Refresh list to show separate entries
       setShowReviewPanel(false);
       setSelectedSection(null);
@@ -157,17 +157,40 @@ export function Tester({ onLogout }) {
 
   const filteredSections = sections.filter(s => {
     const matchesSearch = s.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSidebar = 
+    const matchesSidebar =
       activeFilter === 'all' ? true :
-      activeFilter === 'pending' ? s.current_status === 'In Testing' :
-      activeFilter === 'logged' ? s.current_status === 'Issue Logged' :
-      activeFilter === 'passed' ? (s.current_status === 'Published') : true;
+        activeFilter === 'pending' ? s.current_status === 'In Testing' :
+          activeFilter === 'logged' ? s.current_status === 'Issue Logged' :
+            activeFilter === 'passed' ? (s.current_status === 'Published') : true;
     return matchesSearch && matchesSidebar;
   });
 
+  const handleDownload = async (sectionId, title) => {
+    try {
+      const response = await api.get(`/sections/${sectionId}/download`, {
+        responseType: 'blob',
+      });
+      const section = sections.find(s => s.id === sectionId);
+      const originalFileName = section?.zip_url ? section.zip_url.split('/').pop() : 'file.zip';
+      const extension = originalFileName.split('.').pop();
+
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const cleanTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      link.setAttribute('download', `${cleanTitle}.${extension}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      alert("Download failed.");
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
-      
+
       {/* SIDEBAR */}
       <div className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col sticky top-0 h-screen">
         <div className="p-8">
@@ -176,7 +199,7 @@ export function Tester({ onLogout }) {
             TestingHub
           </h1>
         </div>
-        
+
         <nav className="flex-1 px-4 space-y-2">
           <SidebarItem icon={<FaHome />} label="All Assets" active={activeFilter === 'all'} onClick={() => setActiveFilter('all')} />
           <SidebarItem icon={<FaClock className="text-blue-400" />} label="In Testing" count={stats.pending} active={activeFilter === 'pending'} onClick={() => setActiveFilter('pending')} />
@@ -187,7 +210,7 @@ export function Tester({ onLogout }) {
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
             <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center font-black text-white text-xs">
-                {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : <FaUserCircle />}
+              {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : <FaUserCircle />}
             </div>
             <div className="overflow-hidden">
               <p className="text-white font-black text-sm leading-none truncate">{currentUser.name || "Tester"}</p>
@@ -207,12 +230,12 @@ export function Tester({ onLogout }) {
             <h2 className="text-4xl font-black text-slate-900 tracking-tight italic">Tester Panel</h2>
             <p className="text-slate-500 font-medium">Protocol: Separate Issue Logging</p>
           </div>
-          
+
           <div className="flex items-center gap-4">
             {/* NOTIFICATION DROPDOWN */}
             <div className="relative" ref={notifRef}>
-              <button 
-                onClick={() => setShowNotifDropdown(!showNotifDropdown)} 
+              <button
+                onClick={() => setShowNotifDropdown(!showNotifDropdown)}
                 className="p-4 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-purple-600 transition-all shadow-sm relative"
               >
                 <FaBell size={20} />
@@ -225,7 +248,7 @@ export function Tester({ onLogout }) {
                   <div className="space-y-3 max-h-60 overflow-y-auto">
                     {notifications.length > 0 ? notifications.map(n => (
                       <div key={n.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex gap-3 cursor-pointer hover:bg-purple-50" onClick={() => { openReview(sections.find(s => s.id === n.id)); setShowNotifDropdown(false); }}>
-                        <div className="text-purple-600 mt-1"><FaLayerGroup size={14}/></div>
+                        <div className="text-purple-600 mt-1"><FaLayerGroup size={14} /></div>
                         <div>
                           <p className="text-xs font-black text-slate-800">{n.text}</p>
                           <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Pending Task</p>
@@ -239,12 +262,12 @@ export function Tester({ onLogout }) {
 
             <div className="relative">
               <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Search assets..." 
-                className="pl-12 pr-6 py-4 bg-white border border-slate-200 rounded-2xl w-80 shadow-sm outline-none focus:ring-2 ring-purple-500/20" 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
+              <input
+                type="text"
+                placeholder="Search assets..."
+                className="pl-12 pr-6 py-4 bg-white border border-slate-200 rounded-2xl w-80 shadow-sm outline-none focus:ring-2 ring-purple-500/20"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
@@ -261,14 +284,14 @@ export function Tester({ onLogout }) {
           <div className="py-40 text-center"><FaSpinner className="animate-spin text-purple-600 text-5xl mx-auto" /></div>
         ) : (
           <div className={`grid gap-8 ${showReviewPanel ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
-            
+
             {/* LIST SECTION */}
             <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden h-fit">
               <table className="w-full text-left">
                 <thead className="bg-slate-50/50">
                   <tr className="border-b border-slate-100">
                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset Name</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 text-right uppercase">Status</th>
+                    <th className="px-22 py-5 text-[10px] font-black text-slate-400 text-right uppercase">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -281,10 +304,12 @@ export function Tester({ onLogout }) {
                         </div>
                       </td>
                       <td className="px-8 py-6 text-right">
-                        <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase border ${
-                          item.current_status === 'Published' || item.current_status === 'QA Passed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                          item.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-blue-50 text-blue-600 border-blue-100'
-                        }`}>{item.current_status}</span>
+                        <button onClick={() => handleDownload(item.id, item.title)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl">
+                          <FaDownload />
+                        </button>
+                        <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase border ${item.current_status === 'Published' || item.current_status === 'QA Passed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                            item.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-blue-50 text-blue-600 border-blue-100'
+                          }`}>{item.current_status}</span>
                       </td>
                     </tr>
                   ))}
@@ -349,9 +374,9 @@ export function Tester({ onLogout }) {
                       ))}
                     </div>
 
-                    <textarea rows="3" className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 ring-purple-500/10" placeholder="Specific problem description..." value={issueData.desc} onChange={(e) => setIssueData({...issueData, desc: e.target.value})} />
+                    <textarea rows="3" className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 ring-purple-500/10" placeholder="Specific problem description..." value={issueData.desc} onChange={(e) => setIssueData({ ...issueData, desc: e.target.value })} />
 
-                    <button 
+                    <button
                       onClick={addIssueToReport}
                       disabled={!issueData.desc}
                       className="w-full py-3 border-2 border-dashed border-slate-300 text-slate-500 rounded-xl font-black text-[11px] uppercase hover:border-purple-400 hover:text-purple-600 transition-all flex items-center justify-center gap-2"
@@ -360,9 +385,9 @@ export function Tester({ onLogout }) {
                     </button>
                   </div>
 
-                  <button 
-                    disabled={reportIssues.length === 0} 
-                    onClick={() => handleUpdateStatus(selectedSection.id, 'Issue Logged')} 
+                  <button
+                    disabled={reportIssues.length === 0}
+                    onClick={() => handleUpdateStatus(selectedSection.id, 'Issue Logged')}
                     className="w-full py-5 bg-rose-600 text-white rounded-2xl font-black hover:bg-rose-700 disabled:opacity-30 transition-all shadow-lg shadow-rose-200"
                   >
                     Submit {reportIssues.length} Separate Issues
