@@ -7,7 +7,7 @@ import {
     FaDesktop,
     FaMobileAlt,
     FaChartLine, FaTrophy, FaClock,
-    FaSignOutAlt, FaUserShield, FaEye, FaRegImage,FaUserCircle
+    FaSignOutAlt, FaUserShield, FaEye, FaRegImage, FaUserCircle, FaSearch
 } from 'react-icons/fa';
 
 const api = axios.create({ baseURL: 'http://localhost:8000/api' });
@@ -19,6 +19,12 @@ export function Admin({ onLogout }) {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
+    // FILTERS
+    const [approvalSearch, setApprovalSearch] = useState('');
+    const [approvalFilter, setApprovalFilter] = useState('all');
+    const [repoSearch, setRepoSearch] = useState('');
+    const [repoFilter, setRepoFilter] = useState('all');
+
     // ASSETS VIEWER STATES
     const [isAssetsModalOpen, setIsAssetsModalOpen] = useState(false);
     const [selectedSection, setSelectedSection] = useState(null);
@@ -28,7 +34,7 @@ export function Admin({ onLogout }) {
     const [formData, setFormData] = useState({ username: '', email: '', password: '', role: 'creator' });
     const [adminUser, setAdminUser] = useState({ username: 'Administrator', role: 'Super Admin' });
 
-    // --- 1. MEMOIZED DATA FETCHING ---
+    // --- 1. DATA FETCHING ---
     const fetchInitialData = useCallback(async () => {
         setLoading(true);
         try {
@@ -45,9 +51,7 @@ export function Admin({ onLogout }) {
         }
     }, []);
 
-    // --- 2. SESSION & INITIALIZATION ---
     useEffect(() => {
-        // CRITICAL FIX: Changed from localStorage to sessionStorage
         const storedUser = sessionStorage.getItem('user');
         if (storedUser) {
             const savedUser = JSON.parse(storedUser);
@@ -57,12 +61,55 @@ export function Admin({ onLogout }) {
             });
             fetchInitialData();
         } else {
-            // Force logout if no session exists
             onLogout();
         }
     }, [fetchInitialData, onLogout]);
 
-    // --- 3. ASSET VIEWER LOGIC ---
+    // --- 2. ACTION HANDLERS ---
+    
+    // NEW: Handle Admin Rejection of Assets
+    const handleRejectAssets = async (id) => {
+        if (!window.confirm("Reject these image assets? This will notify the Designer immediately and skip the Creator/Tester loop.")) return;
+        try {
+            // Update status to a specific flag that the Designer's dashboard should listen for
+            await api.put(`/sections/${id}`, { current_status: 'Rejected by Admin' });
+            alert("Assets rejected. Sent to Designer.");
+            fetchInitialData();
+        } catch {
+            alert("Rejection failed.");
+        }
+    };
+
+    const handleStatusUpdate = async (id, newStatus) => {
+        const isRollback = newStatus === 'Issue Logged';
+        const msg = isRollback ? "Rollback section? This will pull it from the live view." : "Push to LIVE?";
+        if (!window.confirm(msg)) return;
+
+        try {
+            const payload = isRollback
+                ? { current_status: newStatus, tester_id: null }
+                : { current_status: newStatus };
+
+            await api.put(`/sections/${id}`, payload);
+            fetchInitialData();
+        } catch {
+            alert("Update failed.");
+        }
+    };
+
+    const handleAssignTester = async (sectionId, testerId) => {
+        if (!testerId) return;
+        try {
+            await api.put(`/sections/${sectionId}`, {
+                tester_id: testerId,
+                current_status: 'In Testing'
+            });
+            alert("Tester assigned successfully.");
+            fetchInitialData();
+        } catch { alert("Assignment failed."); }
+    };
+
+    // --- 3. ASSET VIEWER & DOWNLOADS ---
     const openAssetsViewer = async (section) => {
         setSelectedSection(section);
         setIsAssetsModalOpen(true);
@@ -89,49 +136,12 @@ export function Admin({ onLogout }) {
         link.remove();
     };
 
-    const handleLogout = () => {
-        sessionStorage.removeItem('user'); // Changed to sessionStorage
-        onLogout();
-    };
-
-    const handleAssignTester = async (sectionId, testerId) => {
-        if (!testerId) return;
-        try {
-            await api.put(`/sections/${sectionId}`, {
-                tester_id: testerId,
-                current_status: 'In Testing'
-            });
-            alert("Tester assigned successfully.");
-            fetchInitialData();
-        } catch { alert("Assignment failed."); }
-    };
-
-    const handleStatusUpdate = async (id, newStatus) => {
-        const isRollback = newStatus === 'Issue Logged';
-        const msg = isRollback ? "Rollback section? This will pull it from the live view." : "Push to LIVE?";
-        if (!window.confirm(msg)) return;
-
-        try {
-            const payload = isRollback
-                ? { current_status: newStatus, tester_id: null }
-                : { current_status: newStatus };
-
-            await api.put(`/sections/${id}`, payload);
-            fetchInitialData();
-        } catch {
-            alert("Update failed.");
-        }
-    };
-
     const handleDownload = async (sectionId, title) => {
         try {
-            const response = await api.get(`/sections/${sectionId}/download`, {
-                responseType: 'blob',
-            });
+            const response = await api.get(`/sections/${sectionId}/download`, { responseType: 'blob' });
             const section = sections.find(s => s.id === sectionId);
             const originalFileName = section?.zip_url ? section.zip_url.split('/').pop() : 'file.zip';
             const extension = originalFileName.split('.').pop();
-
             const blob = new Blob([response.data], { type: response.headers['content-type'] });
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -141,9 +151,12 @@ export function Admin({ onLogout }) {
             document.body.appendChild(link);
             link.click();
             link.remove();
-        } catch {
-            alert("Download failed.");
-        }
+        } catch { alert("Download failed."); }
+    };
+
+    const handleLogout = () => {
+        sessionStorage.removeItem('user');
+        onLogout();
     };
 
     const handleCreateAccount = async (e) => {
@@ -164,7 +177,7 @@ export function Admin({ onLogout }) {
         } catch { alert("Delete failed."); }
     };
 
-    // --- DATA AGGREGATION ---
+    // --- 4. ANALYTICS ---
     const testers = accounts.filter(acc => acc.role === 'tester');
     const getWorkload = (id) => sections.filter(s => s.tester_id === id && s.current_status === 'In Testing').length;
     
@@ -192,7 +205,6 @@ export function Admin({ onLogout }) {
                     <FaUserShield className="text-blue-400 h-8 w-8" />
                     <span>Admin Panel</span>
                 </div>
-
                 <nav className="flex-1 px-4 py-6 space-y-2">
                     {[
                         { id: 'home', label: 'Dashboard', icon: <FaHome /> },
@@ -206,7 +218,6 @@ export function Admin({ onLogout }) {
                         </button>
                     ))}
                 </nav>
-
                 <div className="p-4 border-t border-slate-800 bg-slate-900/40">
                     <div className="flex items-center gap-3 px-2 mb-4">
                         <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 border border-blue-500/30 font-black">
@@ -241,7 +252,6 @@ export function Admin({ onLogout }) {
                                     <StatusTile label="Live Sections" val={publishedCount} icon={<FaCheckDouble className="text-emerald-500" />} />
                                     <StatusTile label="Total Users" val={totalUsers} icon={<FaUsers className="text-indigo-600" />} />
                                 </div>
-
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                     <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                                         <h3 className="font-black text-xl mb-6 flex items-center gap-2">
@@ -276,7 +286,25 @@ export function Admin({ onLogout }) {
 
                         {activeTab === 'repository' && (
                             <div className="space-y-6">
-                                <h2 className="text-3xl font-black">Master Asset Repository</h2>
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <h2 className="text-3xl font-black">Master Asset Repository</h2>
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <div className="relative flex items-center">
+                                            <FaSearch className="absolute left-4 text-slate-400 text-sm" />
+                                            <input type="text" placeholder="Search assets..." value={repoSearch} onChange={(e) => setRepoSearch(e.target.value)}
+                                                className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 w-64 shadow-sm" />
+                                        </div>
+                                        <select className="bg-white border border-slate-200 px-4 py-2 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 shadow-sm cursor-pointer"
+                                            value={repoFilter} onChange={(e) => setRepoFilter(e.target.value)}>
+                                            <option value="all">All Statuses</option>
+                                            <option value="In Testing">In Testing</option>
+                                            <option value="Ready for Store">Ready for Store</option>
+                                            <option value="Published">Published</option>
+                                            <option value="Issue Logged">Issue Logged</option>
+                                            <option value="Rejected by Admin">Rejected by Admin</option>
+                                        </select>
+                                    </div>
+                                </div>
                                 <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-900 text-[10px] uppercase font-black text-slate-400">
@@ -288,16 +316,31 @@ export function Admin({ onLogout }) {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
-                                            {sections.map(sec => (
+                                            {sections
+                                                .filter(sec => repoFilter === 'all' || sec.current_status === repoFilter)
+                                                .filter(sec => sec.title.toLowerCase().includes(repoSearch.toLowerCase()))
+                                                .map(sec => (
                                                 <tr key={sec.id} className="hover:bg-slate-50 transition-colors">
                                                     <td className="px-6 py-4 text-xs font-mono text-slate-400 uppercase">SEC-{sec.id}</td>
                                                     <td className="px-6 py-4 font-bold">{sec.title}</td>
                                                     <td className="px-6 py-4">
-                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${sec.current_status === 'Published' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase 
+                                                            ${sec.current_status === 'Published' ? 'bg-emerald-100 text-emerald-600' : 
+                                                              sec.current_status === 'Rejected by Admin' ? 'bg-rose-100 text-rose-600' :
+                                                              'bg-amber-100 text-amber-600'}`}>
                                                             {sec.current_status}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 text-right flex justify-end gap-2">
+                                                        {/* REJECT BUTTON: Only visible if Ready for Store */}
+                                                        {sec.current_status === 'Ready for Store' && (
+                                                            <button 
+                                                                onClick={() => handleRejectAssets(sec.id)}
+                                                                className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-rose-100 transition-all border border-rose-100"
+                                                            >
+                                                                <FaTimes /> REJECT ASSETS
+                                                            </button>
+                                                        )}
                                                         <button onClick={() => openAssetsViewer(sec)} className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-indigo-100 transition-all">
                                                             <FaEye /> VIEW ASSETS
                                                         </button>
@@ -315,33 +358,52 @@ export function Admin({ onLogout }) {
 
                         {activeTab === 'approval' && (
                             <div className="space-y-6">
-                                <h2 className="text-3xl font-black">Go-Live Module</h2>
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <h2 className="text-3xl font-black">Go-Live Module</h2>
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <div className="relative flex items-center">
+                                            <FaSearch className="absolute left-4 text-slate-400 text-sm" />
+                                            <input type="text" placeholder="Search by title..." value={approvalSearch} onChange={(e) => setApprovalSearch(e.target.value)}
+                                                className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 w-64 shadow-sm" />
+                                        </div>
+                                        <select className="bg-white border border-slate-200 px-4 py-2 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 shadow-sm cursor-pointer"
+                                            value={approvalFilter} onChange={(e) => setApprovalFilter(e.target.value)}>
+                                            <option value="all">All Statuses</option>
+                                            <option value="Ready for Store">Ready for Store</option>
+                                            <option value="Published">Published</option>
+                                            <option value="Issue Logged">Issue Logged</option>
+                                        </select>
+                                    </div>
+                                </div>
                                 <div className="grid gap-6">
-                                    {sections.filter(sec => ['Ready for Store', 'Published', 'Issue Logged'].includes(sec.current_status)).length > 0 ? (
-                                        sections.filter(sec => ['Ready for Store', 'Published', 'Issue Logged'].includes(sec.current_status)).map(sec => (
-                                            <div key={sec.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex justify-between items-center">
+                                    {sections
+                                        .filter(sec => ['Ready for Store', 'Published', 'Issue Logged'].includes(sec.current_status))
+                                        .filter(sec => approvalFilter === 'all' || sec.current_status === approvalFilter)
+                                        .filter(sec => sec.title.toLowerCase().includes(approvalSearch.toLowerCase()))
+                                        .map(sec => (
+                                            <div key={sec.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex justify-between items-center transition-all hover:shadow-md">
                                                 <div>
                                                     <h3 className="text-xl font-black">{sec.title}</h3>
-                                                    <p className={`text-xs font-bold uppercase ${sec.current_status === 'Issue Logged' ? 'text-rose-500' : 'text-indigo-500'}`}>
+                                                    <p className={`text-xs font-bold uppercase ${sec.current_status === 'Issue Logged' ? 'text-rose-500' : sec.current_status === 'Published' ? 'text-emerald-500' : 'text-indigo-500'}`}>
                                                         {sec.current_status}
                                                     </p>
                                                 </div>
                                                 <div className="flex gap-3">
                                                     {sec.current_status === 'Published' ? (
-                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Issue Logged')} className="bg-rose-100 text-rose-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2">
+                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Issue Logged')} className="bg-rose-100 text-rose-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-rose-200 transition-colors">
                                                             <FaUndo /> Emergency Rollback
                                                         </button>
                                                     ) : sec.current_status === 'Issue Logged' ? (
-                                                        <span className="bg-rose-50 text-rose-500 px-4 py-2 rounded-xl font-black text-xs">ROLLED BACK</span>
+                                                        <span className="bg-rose-50 text-rose-500 px-4 py-2 rounded-xl font-black text-xs border border-rose-100">ROLLED BACK</span>
                                                     ) : (
-                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black flex items-center gap-2">
+                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black flex items-center gap-2 hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all">
                                                             <FaRocket /> Publish to Store
                                                         </button>
                                                     )}
                                                 </div>
                                             </div>
                                         ))
-                                    ) : <div className="p-20 text-center text-slate-400 bg-white rounded-3xl border-2 border-dashed">No deployments pending.</div>}
+                                    }
                                 </div>
                             </div>
                         )}
@@ -395,7 +457,6 @@ export function Admin({ onLogout }) {
                                 <FaTimes />
                             </button>
                         </div>
-
                         <div className="flex-1 overflow-y-auto p-10 bg-slate-100/30">
                             {assetsLoading ? (
                                 <div className="h-full flex flex-col items-center justify-center">
@@ -406,22 +467,16 @@ export function Admin({ onLogout }) {
                                     {sectionDesigns.map((design) => (
                                         <div key={design.id} className="group bg-white p-4 rounded-4xl shadow-sm border border-slate-200 hover:shadow-xl transition-all">
                                             <div className="rounded-3xl overflow-hidden bg-slate-200 relative aspect-square flex items-center justify-center">
-                                                <img
-                                                    src={design.image_url}
-                                                    alt={design.image_type}
-                                                    className="max-w-full max-h-full object-contain"
-                                                    onError={(e) => { e.target.src = "https://placehold.co/400?text=Design+Not+Found"; }}
-                                                />
+                                                <img src={design.image_url} alt={design.image_type} className="max-w-full max-h-full object-contain"
+                                                    onError={(e) => { e.target.src = "https://placehold.co/400?text=Design+Not+Found"; }} />
                                             </div>
                                             <div className="mt-6 flex justify-between items-center px-2">
                                                 <div>
                                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{design.image_type}</p>
                                                     <p className="font-bold text-slate-700">Design #{design.id}</p>
                                                 </div>
-                                                <button
-                                                    onClick={() => downloadDesignImage(design.image_url, design.image_type, design.id)}
-                                                    className="bg-slate-900 text-white p-3 rounded-2xl hover:bg-blue-600 transition-all shadow-lg"
-                                                >
+                                                <button onClick={() => downloadDesignImage(design.image_url, design.image_type, design.id)}
+                                                    className="bg-slate-900 text-white p-3 rounded-2xl hover:bg-blue-600 transition-all shadow-lg">
                                                     <FaDownload />
                                                 </button>
                                             </div>
@@ -466,7 +521,6 @@ export function Admin({ onLogout }) {
     );
 }
 
-// Internal Helper Component for Stats
 function StatusTile({ label, val, icon }) {
     return (
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm transition-transform hover:scale-[1.02]">

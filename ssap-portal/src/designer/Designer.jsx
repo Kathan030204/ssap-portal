@@ -4,7 +4,7 @@ import {
   FaPalette, FaImage, FaDesktop, FaMobileAlt,
   FaAd, FaSpinner, FaCloudUploadAlt, FaDownload,
   FaListUl, FaCheckCircle, FaLayerGroup, FaChartBar, FaStore, FaRocket, FaCheck,
-  FaUserCircle, FaSignOutAlt, FaBell, FaTimes
+  FaUserCircle, FaSignOutAlt, FaBell, FaTimes, FaExclamationTriangle
 } from 'react-icons/fa';
 
 const api = axios.create({ baseURL: 'http://localhost:8000/api' });
@@ -23,7 +23,6 @@ export function Designer({ onLogout }) {
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifRef = useRef(null);
 
-  // CHANGED: Initialized as arrays to support multiple files
   const [pendingAssets, setPendingAssets] = useState({
     desktop: [],
     mobile: [],
@@ -44,11 +43,16 @@ export function Designer({ onLogout }) {
       const allSections = response.data;
       setSections(allSections);
 
-      const readyForDesign = allSections.filter(s => s.current_status === 'QA Passed');
-      const alerts = readyForDesign.map(s => ({
+      // UPDATED: Notifications now include Admin Rejections
+      const actionable = allSections.filter(s => 
+        s.current_status === 'QA Passed' || s.current_status === 'Rejected by Admin'
+      );
+      
+      const alerts = actionable.map(s => ({
         id: s.id,
         title: s.title,
-        msg: "QA PASSED",
+        status: s.current_status,
+        msg: s.current_status === 'Rejected by Admin' ? "REJECTED BY ADMIN" : "QA PASSED",
         time: "Action Required"
       }));
       setNotifications(alerts);
@@ -72,13 +76,12 @@ export function Designer({ onLogout }) {
     return () => clearInterval(interval);
   }, []);
 
-  // CHANGED: Reset to empty arrays
   useEffect(() => {
     setPendingAssets({ desktop: [], mobile: [], banner: [] });
   }, [selectedSectionId]);
 
-  const handleNotifClick = (sectionId) => {
-    setViewFilter('passed');
+  const handleNotifClick = (sectionId, status) => {
+    setViewFilter(status === 'Rejected by Admin' ? 'rejected' : 'passed');
     setSelectedSectionId(sectionId);
     setShowNotifDropdown(false);
   };
@@ -87,6 +90,7 @@ export function Designer({ onLogout }) {
     switch (status) {
       case 'In Testing': return 'text-blue-600 bg-blue-100';
       case 'Issue Logged': return 'text-rose-600 bg-rose-100';
+      case 'Rejected by Admin': return 'text-white bg-rose-600 border border-rose-700 animate-pulse';
       case 'QA Passed': return 'text-indigo-600 bg-indigo-100 border border-indigo-200';
       default: return 'text-emerald-600 bg-emerald-100';
     }
@@ -94,25 +98,27 @@ export function Designer({ onLogout }) {
 
   const displaySections = sections.filter(s => {
     if (viewFilter === 'all') {
-        return s.current_status === 'QA Passed' || s.current_status === 'Published';
+      return s.current_status === 'QA Passed' || s.current_status === 'Published' || s.current_status === 'Rejected by Admin';
     }
     if (viewFilter === 'passed') return s.current_status === 'QA Passed';
+    if (viewFilter === 'rejected') return s.current_status === 'Rejected by Admin';
     if (viewFilter === 'ready') return s.current_status === 'Ready for Store';
     if (viewFilter === 'published') return s.current_status === 'Published';
     return true;
   });
 
-  const showPipeline = viewFilter === 'all' || viewFilter === 'passed';
+  // UPDATED: Show pipeline if status is QA Passed OR Rejected
+  const showPipeline = viewFilter === 'all' || viewFilter === 'passed' || viewFilter === 'rejected';
 
   const stats = {
-    total: sections.filter(s => s.current_status === 'QA Passed' || s.current_status === 'Published').length,
+    total: sections.filter(s => ['QA Passed', 'Published', 'Rejected by Admin'].includes(s.current_status)).length,
     passed: sections.filter(s => s.current_status === 'QA Passed').length,
+    rejected: sections.filter(s => s.current_status === 'Rejected by Admin').length,
     completed: sections.filter(s => ['Published', 'Ready for Store'].includes(s.current_status)).length
   };
 
   const selectedSection = sections.find(s => s.id === selectedSectionId);
 
-  // CHANGED: Appends new files to the array instead of replacing
   const handleFileSelect = (e, assetType) => {
     const files = Array.from(e.target.files);
     if (files.length > 0) {
@@ -121,7 +127,7 @@ export function Designer({ onLogout }) {
         [assetType]: [...prev[assetType], ...files] 
       }));
     }
-    e.target.value = null; // Reset input
+    e.target.value = null; 
   };
 
   const removeFile = (assetType, index) => {
@@ -131,7 +137,6 @@ export function Designer({ onLogout }) {
     }));
   };
 
-  // CHANGED: Loops through all arrays to upload every file
   const handleFinalSubmit = async () => {
     const totalFiles = [...pendingAssets.desktop, ...pendingAssets.mobile, ...pendingAssets.banner].length;
     if (totalFiles === 0) {
@@ -157,7 +162,7 @@ export function Designer({ onLogout }) {
       await Promise.all(uploadPromises);
       await api.put(`/sections/${selectedSectionId}`, { current_status: 'Ready for Store' });
 
-      alert("Package Submitted Successfully!");
+      alert("Package Re-submitted Successfully!");
       setSelectedSectionId(null);
       fetchDesignTasks();
     } catch {
@@ -199,6 +204,13 @@ export function Designer({ onLogout }) {
             className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all ${viewFilter === 'all' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
             <FaListUl /> All Sections
           </button>
+          
+          {/* NEW: Rejected Filter Button */}
+          <button onClick={() => { setViewFilter('rejected'); setSelectedSectionId(null); }}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all ${viewFilter === 'rejected' ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
+            <FaExclamationTriangle className={stats.rejected > 0 ? "text-rose-400" : ""} /> Rejections {stats.rejected > 0 && `(${stats.rejected})`}
+          </button>
+
           <button onClick={() => { setViewFilter('passed'); setSelectedSectionId(null); }}
             className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all ${viewFilter === 'passed' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
             <FaCheckCircle /> QA Passed
@@ -246,12 +258,12 @@ export function Designer({ onLogout }) {
               </button>
               {showNotifDropdown && (
                 <div className="absolute right-0 mt-4 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 z-50 overflow-hidden">
-                  <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-4">QA Approvals</h4>
+                  <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-4">Urgent Actions</h4>
                   <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
                     {notifications.length > 0 ? notifications.map(n => (
-                      <div key={n.id} onClick={() => handleNotifClick(n.id)} className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 group cursor-pointer hover:bg-indigo-600 transition-all">
-                        <p className="text-xs font-black text-indigo-900 group-hover:text-white leading-tight">{n.title}</p>
-                        <p className="text-[10px] font-bold text-indigo-400 group-hover:text-indigo-200 mt-1 uppercase italic">{n.msg}</p>
+                      <div key={n.id} onClick={() => handleNotifClick(n.id, n.status)} className={`p-4 rounded-2xl border group cursor-pointer transition-all ${n.status === 'Rejected by Admin' ? 'bg-rose-50 border-rose-100 hover:bg-rose-600' : 'bg-indigo-50 border-indigo-100 hover:bg-indigo-600'}`}>
+                        <p className={`text-xs font-black leading-tight ${n.status === 'Rejected by Admin' ? 'text-rose-900 group-hover:text-white' : 'text-indigo-900 group-hover:text-white'}`}>{n.title}</p>
+                        <p className={`text-[10px] font-bold mt-1 uppercase italic ${n.status === 'Rejected by Admin' ? 'text-rose-500 group-hover:text-rose-100' : 'text-indigo-400 group-hover:text-indigo-200'}`}>{n.msg}</p>
                       </div>
                     )) : <p className="text-slate-400 italic text-sm text-center py-4">All caught up!</p>}
                   </div>
@@ -263,13 +275,13 @@ export function Designer({ onLogout }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <StatCard label="Master Library" val={stats.total} icon={<FaLayerGroup />} color="text-slate-400" />
             <StatCard label="Awaiting Assets" val={stats.passed} icon={<FaCheckCircle />} color="text-indigo-500" />
-            <StatCard label="Handed Over" val={stats.completed} icon={<FaChartBar />} color="text-emerald-500" />
+            <StatCard label="Admin Rejections" val={stats.rejected} icon={<FaExclamationTriangle />} color="text-rose-500" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className={`${showPipeline ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-4`}>
               <h1 className="text-2xl font-black mb-6 capitalize tracking-tight flex items-center gap-3">
-                <div className="h-2 w-10 bg-indigo-600 rounded-full"></div> {viewFilter} Repository
+                <div className={`h-2 w-10 rounded-full ${viewFilter === 'rejected' ? 'bg-rose-600' : 'bg-indigo-600'}`}></div> {viewFilter} Repository
               </h1>
               {loading && sections.length === 0 ? (
                 <div className="flex flex-col items-center py-20 text-slate-300">
@@ -278,7 +290,7 @@ export function Designer({ onLogout }) {
                 </div>
               ) : (
                 displaySections.map((section) => (
-                  <div key={section.id} onClick={() => showPipeline && setSelectedSectionId(section.current_status === 'QA Passed' ? section.id : null)}
+                  <div key={section.id} onClick={() => showPipeline && setSelectedSectionId((section.current_status === 'QA Passed' || section.current_status === 'Rejected by Admin') ? section.id : null)}
                     className={`p-6 rounded-3xl border-2 transition-all bg-white flex justify-between items-center ${selectedSectionId === section.id ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-lg' : 'border-transparent shadow-sm'} ${showPipeline ? 'cursor-pointer hover:border-slate-300' : ''}`}>
                     <div className="flex gap-4 items-center">
                       <div className={`p-4 rounded-2xl ${selectedSectionId === section.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
@@ -287,7 +299,7 @@ export function Designer({ onLogout }) {
                       <h3 className="font-bold text-lg leading-none">{section.title}</h3>
                     </div>
                     <div className="flex gap-4 items-center">
-                      <button onClick={() => handleDownload(section.id, section.title)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl">
+                      <button onClick={(e) => {e.stopPropagation(); handleDownload(section.id, section.title)}} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl">
                         <FaDownload />
                       </button>
                       <span className={`px-2 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm ${getStatusClasses(section.current_status)}`}>
@@ -303,13 +315,23 @@ export function Designer({ onLogout }) {
               <div className="lg:col-span-5">
                 <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm sticky top-10">
                   <h3 className="font-black text-xl mb-6 italic flex items-center gap-2">
-                    <FaCloudUploadAlt className="text-indigo-600" /> Asset Pipeline
+                    <FaCloudUploadAlt className={selectedSection?.current_status === 'Rejected by Admin' ? "text-rose-600" : "text-indigo-600"} /> 
+                    {selectedSection?.current_status === 'Rejected by Admin' ? 'Corrective Upload' : 'Asset Pipeline'}
                   </h3>
                   {selectedSection ? (
                     <div className="space-y-4">
-                      <div className="p-4 bg-indigo-50 rounded-2xl mb-4 border border-indigo-100">
-                        <p className="text-[10px] font-black text-indigo-400 uppercase">Current Project</p>
-                        <p className="font-bold text-indigo-900 leading-tight">{selectedSection.title}</p>
+                      {selectedSection.current_status === 'Rejected by Admin' && (
+                        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl mb-4 flex items-start gap-3">
+                            <FaExclamationTriangle className="text-rose-600 mt-1 shrink-0" />
+                            <div>
+                                <p className="text-[11px] font-black text-rose-700 uppercase">Rejection Notice</p>
+                                <p className="text-xs font-bold text-rose-600">Admin has rejected the previous assets. Please re-upload corrected versions below.</p>
+                            </div>
+                        </div>
+                      )}
+                      <div className={`p-4 rounded-2xl mb-4 border ${selectedSection.current_status === 'Rejected by Admin' ? 'bg-rose-50 border-rose-100' : 'bg-indigo-50 border-indigo-100'}`}>
+                        <p className={`text-[10px] font-black uppercase ${selectedSection.current_status === 'Rejected by Admin' ? 'text-rose-400' : 'text-indigo-400'}`}>Current Project</p>
+                        <p className={`font-bold leading-tight ${selectedSection.current_status === 'Rejected by Admin' ? 'text-rose-900' : 'text-indigo-900'}`}>{selectedSection.title}</p>
                       </div>
                       {[
                         { id: 'desktop', icon: <FaDesktop />, label: 'Desktop (1920x1080)' },
@@ -327,7 +349,6 @@ export function Designer({ onLogout }) {
                             <input type="file" multiple className="hidden" disabled={loading} onChange={(e) => handleFileSelect(e, asset.id)} />
                             </label>
                             
-                            {/* List of files selected for this category */}
                             <div className="flex flex-wrap gap-2">
                                 {pendingAssets[asset.id].map((file, idx) => (
                                     <div key={idx} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg border border-emerald-100 text-[10px] font-bold">
@@ -340,8 +361,8 @@ export function Designer({ onLogout }) {
                             </div>
                         </div>
                       ))}
-                      <button onClick={handleFinalSubmit} disabled={loading || selectedSection.current_status !== 'QA Passed'} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg hover:bg-indigo-700 disabled:bg-slate-200 transition-all mt-6 uppercase tracking-widest text-xs">
-                        {loading ? <FaSpinner className="animate-spin mx-auto text-xl" /> : 'Finalize Package'}
+                      <button onClick={handleFinalSubmit} disabled={loading} className={`w-full py-4 rounded-2xl font-black shadow-lg transition-all mt-6 uppercase tracking-widest text-xs ${selectedSection.current_status === 'Rejected by Admin' ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'} disabled:bg-slate-200`}>
+                        {loading ? <FaSpinner className="animate-spin mx-auto text-xl" /> : 'Finalize & Re-Submit'}
                       </button>
                     </div>
                   ) : (
@@ -349,7 +370,7 @@ export function Designer({ onLogout }) {
                       <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-dashed border-slate-200">
                         <FaPalette className="text-slate-200 text-2xl" />
                       </div>
-                      <p className="text-slate-400 italic text-sm">Pick a QA Passed item to start the asset upload workflow.</p>
+                      <p className="text-slate-400 italic text-sm">Pick a task to start the upload workflow.</p>
                     </div>
                   )}
                 </div>
