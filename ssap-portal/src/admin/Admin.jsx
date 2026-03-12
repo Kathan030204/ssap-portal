@@ -37,7 +37,7 @@ export function Admin({ onLogout }) {
     const [accounts, setAccounts] = useState([]);
     const [sections, setSections] = useState([]);
     const [loading, setLoading] = useState(true);
-    
+
     // MODAL & FORM STATES
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
@@ -90,7 +90,7 @@ export function Admin({ onLogout }) {
     }, [fetchInitialData, onLogout]);
 
     // --- 2. ACTION HANDLERS ---
-    
+
     // USER MANAGEMENT LOGIC
     const openCreateModal = () => {
         setIsEditMode(false);
@@ -102,11 +102,11 @@ export function Admin({ onLogout }) {
     const openEditModal = (user) => {
         setIsEditMode(true);
         setEditingUserId(user.id);
-        setFormData({ 
-            username: user.username, 
-            email: user.email, 
+        setFormData({
+            username: user.username,
+            email: user.email,
             password: '', // Password empty by default during edit
-            role: user.role 
+            role: user.role
         });
         setIsModalOpen(true);
     };
@@ -125,7 +125,7 @@ export function Admin({ onLogout }) {
             }
             setIsModalOpen(false);
             fetchInitialData();
-        } catch  {
+        } catch {
             alert(isEditMode ? "Error updating account." : "Error creating account.");
         }
     };
@@ -372,30 +372,30 @@ export function Admin({ onLogout }) {
                                                 .filter(sec => repoFilter === 'all' || sec.current_status === repoFilter)
                                                 .filter(sec => sec.title.toLowerCase().includes(repoSearch.toLowerCase()))
                                                 .map(sec => (
-                                                <tr key={sec.id} className="hover:bg-slate-50 transition-colors">
-                                                    <td className="px-6 py-4 text-xs font-mono text-slate-400 uppercase">SEC-{sec.id}</td>
-                                                    <td className="px-6 py-4 font-bold">{sec.title}</td>
-                                                    <td className="px-6 py-4">
-                                                        <StatusBadge status={sec.current_status} />
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                                        {sec.current_status === 'Ready for Store' && (
-                                                            <button 
-                                                                onClick={() => handleRejectAssets(sec.id)}
-                                                                className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-rose-100 transition-all border border-rose-100"
-                                                            >
-                                                                <FaTimes /> REJECT ASSETS
+                                                    <tr key={sec.id} className="hover:bg-slate-50 transition-colors">
+                                                        <td className="px-6 py-4 text-xs font-mono text-slate-400 uppercase">SEC-{sec.id}</td>
+                                                        <td className="px-6 py-4 font-bold">{sec.title}</td>
+                                                        <td className="px-6 py-4">
+                                                            <StatusBadge status={sec.current_status} />
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right flex justify-end gap-2">
+                                                            {sec.current_status === 'Ready for Store' && (
+                                                                <button
+                                                                    onClick={() => handleRejectAssets(sec.id)}
+                                                                    className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-rose-100 transition-all border border-rose-100"
+                                                                >
+                                                                    <FaTimes /> REJECT ASSETS
+                                                                </button>
+                                                            )}
+                                                            <button onClick={() => openAssetsViewer(sec)} className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-indigo-100 transition-all">
+                                                                <FaEye /> VIEW ASSETS
                                                             </button>
-                                                        )}
-                                                        <button onClick={() => openAssetsViewer(sec)} className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-indigo-100 transition-all">
-                                                            <FaEye /> VIEW ASSETS
-                                                        </button>
-                                                        <button onClick={() => handleDownload(sec.id, sec.title)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl">
-                                                            <FaDownload />
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                                            <button onClick={() => handleDownload(sec.id, sec.title)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl">
+                                                                <FaDownload />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
                                         </tbody>
                                     </table>
                                 </div>
@@ -477,15 +477,15 @@ export function Admin({ onLogout }) {
                                                     <td className="px-6 py-4 font-black">{acc.username}</td>
                                                     <td className="px-6 py-4 font-black text-[10px] text-indigo-600 uppercase">{acc.role}</td>
                                                     <td className="px-6 py-4 text-right flex justify-end gap-10">
-                                                        <button 
-                                                            onClick={() => openEditModal(acc)} 
+                                                        <button
+                                                            onClick={() => openEditModal(acc)}
                                                             className="text-blue-500 hover:text-blue-700 transition-colors"
                                                             title="Edit User Role"
                                                         >
                                                             <FaEdit size={18} />
                                                         </button>
-                                                        <button 
-                                                            onClick={() => handleDeleteAccount(acc.id)} 
+                                                        <button
+                                                            onClick={() => handleDeleteAccount(acc.id)}
                                                             className="text-rose-400 hover:text-rose-600 transition-colors"
                                                             title="Delete User"
                                                         >
