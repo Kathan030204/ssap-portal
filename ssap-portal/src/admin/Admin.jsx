@@ -13,13 +13,13 @@ import {
 
 const api = axios.create({ baseURL: 'http://localhost:8000/api' });
 
-// --- NEW NOTIFICATION MODAL COMPONENT ---
+// --- NOTIFICATION MODAL COMPONENT ---
 const NotificationModal = ({ message, type, onClose }) => {
     if (!message) return null;
     const isError = type === 'error';
 
     return (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-100 flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-110 flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden border border-slate-100">
                 <div className={`p-1 h-2 ${isError ? 'bg-rose-500' : 'bg-emerald-500'}`} />
                 <div className="p-8 text-center">
@@ -40,7 +40,30 @@ const NotificationModal = ({ message, type, onClose }) => {
     );
 };
 
-// --- HELPER COMPONENT FOR STATUS BADGES ---
+// --- NEW CONFIRMATION MODAL COMPONENT (Replaces window.confirm) ---
+const ConfirmationModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "PROCEED" }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-100 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden">
+                <div className="p-8 text-center">
+                    <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-500 mx-auto mb-4 flex items-center justify-center">
+                        <FaExclamationTriangle size={28} />
+                    </div>
+                    <h3 className="text-xl font-black text-slate-800 mb-2">{title}</h3>
+                    <p className="text-slate-500 font-bold text-sm leading-relaxed">{message}</p>
+                    <div className="flex gap-3 mt-8">
+                        <button onClick={onCancel} className="flex-1 py-3 rounded-xl font-black text-slate-400 hover:bg-slate-50 transition-all uppercase text-xs">Cancel</button>
+                        <button onClick={onConfirm} className="flex-1 py-3 rounded-xl font-black text-white bg-slate-900 hover:bg-blue-600 transition-all shadow-lg uppercase text-xs">
+                            {confirmText}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const StatusBadge = ({ status }) => {
     const statusConfig = {
         'Published': 'bg-emerald-100 text-emerald-700 border-emerald-200',
@@ -67,6 +90,10 @@ export function Admin({ onLogout }) {
     const [notification, setNotification] = useState({ message: '', type: 'success' });
     const showAlert = (message, type = 'success') => setNotification({ message, type });
     const closeAlert = () => setNotification({ message: '', type: 'success' });
+
+    // CONFIRMATION STATE
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+    const closeConfirm = () => setConfirmModal({ ...confirmModal, isOpen: false });
 
     // MODAL & FORM STATES
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -154,42 +181,57 @@ export function Admin({ onLogout }) {
         }
     };
 
-    const handleDeleteAccount = async (id) => {
-        if (!window.confirm("Delete this user permanently?")) return;
-        try {
-            await api.delete(`/accounts/${id}`);
-            showAlert("User removed from system.");
-            fetchInitialData();
-        } catch { showAlert("Delete failed.", 'error'); }
+    const handleDeleteAccount = (id) => {
+        setConfirmModal({
+            isOpen: true,
+            title: "Delete User?",
+            message: "This will permanently remove the user from the system. This action cannot be undone.",
+            onConfirm: async () => {
+                try {
+                    await api.delete(`/accounts/${id}`);
+                    showAlert("User removed from system.");
+                    fetchInitialData();
+                } catch { showAlert("Delete failed.", 'error'); }
+                closeConfirm();
+            }
+        });
     };
 
-    const handleRejectAssets = async (id) => {
-        if (!window.confirm("Reject these image assets? This will notify the Designer immediately.")) return;
-        try {
-            await api.put(`/sections/${id}`, { current_status: 'Rejected by Admin' });
-            showAlert("Assets rejected. Sent back to Designer Studio.");
-            fetchInitialData();
-        } catch {
-            showAlert("Rejection command failed.", 'error');
-        }
+    const handleRejectAssets = (id) => {
+        setConfirmModal({
+            isOpen: true,
+            title: "Reject Assets?",
+            message: "This will notify the Designer and send the project back to the Studio immediately.",
+            onConfirm: async () => {
+                try {
+                    await api.put(`/sections/${id}`, { current_status: 'Rejected by Admin' });
+                    showAlert("Assets rejected. Sent back to Designer Studio.");
+                    fetchInitialData();
+                } catch { showAlert("Rejection command failed.", 'error'); }
+                closeConfirm();
+            }
+        });
     };
 
-    const handleStatusUpdate = async (id, newStatus) => {
+    const handleStatusUpdate = (id, newStatus) => {
         const isRollback = newStatus === 'Issue Logged';
-        const msg = isRollback ? "Rollback section? This will pull it from the live view." : "Push to LIVE?";
-        if (!window.confirm(msg)) return;
-
-        try {
-            const payload = isRollback
-                ? { current_status: newStatus, tester_id: null }
-                : { current_status: newStatus };
-
-            await api.put(`/sections/${id}`, payload);
-            showAlert(isRollback ? "Section rolled back." : "Section is now LIVE!");
-            fetchInitialData();
-        } catch {
-            showAlert("Update failed.", 'error');
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: isRollback ? "Trigger Rollback?" : "Finalize Go-Live?",
+            message: isRollback ? "This will pull the section from the live view." : "Are you sure you want to push this section to the LIVE store?",
+            confirmText: isRollback ? "ROLLBACK" : "PUBLISH NOW",
+            onConfirm: async () => {
+                try {
+                    const payload = isRollback
+                        ? { current_status: newStatus, tester_id: null }
+                        : { current_status: newStatus };
+                    await api.put(`/sections/${id}`, payload);
+                    showAlert(isRollback ? "Section rolled back." : "Section is now LIVE!");
+                    fetchInitialData();
+                } catch { showAlert("Update failed.", 'error'); }
+                closeConfirm();
+            }
+        });
     };
 
     const handleAssignTester = async (sectionId, testerId) => {
@@ -274,11 +316,21 @@ export function Admin({ onLogout }) {
 
     return (
         <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
-            {/* ALERT MODAL INTEGRATION */}
+            {/* NOTIFICATION MODAL */}
             <NotificationModal
                 message={notification.message}
                 type={notification.type}
                 onClose={closeAlert}
+            />
+
+            {/* CONFIRMATION MODAL */}
+            <ConfirmationModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={closeConfirm}
             />
 
             {/* SIDEBAR */}
