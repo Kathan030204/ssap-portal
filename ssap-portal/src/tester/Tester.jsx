@@ -72,13 +72,13 @@ export function Tester({ onLogout }) {
 
   useEffect(() => {
     fetchInitialData();
-    const interval = setInterval(fetchInitialData, 30000);
+    const interval = setInterval(fetchInitialData, 3000);
     return () => clearInterval(interval);
   }, [fetchInitialData]);
 
   const openReview = async (section) => {
-    // Prevent editing if finalized
-    const finalizedStatuses = ['Published', 'Ready for Store', 'QA Passed'];
+    // UPDATED: Prevent editing if finalized OR sent to Admin
+    const finalizedStatuses = ['Published', 'Ready for Store', 'QA Passed', 'Pending Admin'];
     if (finalizedStatuses.includes(section.current_status)) {
       setShowReviewPanel(false);
       setSelectedSection(null);
@@ -172,10 +172,11 @@ export function Tester({ onLogout }) {
         );
         await Promise.all(promises);
       } else {
+        // UPDATED LOGIC: Send to Admin instead of direct QA Passed
         await api.put(`/sections/${id}`, {
-          current_status: 'QA Passed',
-          description: 'Approved',
-          notes: 'QA Approval'
+          current_status: 'Pending Admin',
+          description: 'Tester approved. Waiting for Admin to allocate a Designer.',
+          notes: 'QA Approval - Sent to Admin for Allocation'
         });
       }
       fetchInitialData();
@@ -209,7 +210,7 @@ export function Tester({ onLogout }) {
     total: sections.length,
     pending: sections.filter(s => s.current_status === 'In Testing').length,
     logged: sections.filter(s => s.current_status === 'Issue Logged').length,
-    qaPassed: sections.filter(s => s.current_status === 'QA Passed').length,
+    qaPassed: sections.filter(s => s.current_status === 'QA Passed' || s.current_status === 'Pending Admin').length,
     published: sections.filter(s => s.current_status === 'Published').length,
   };
 
@@ -219,7 +220,7 @@ export function Tester({ onLogout }) {
     const matchesTab = activeFilter === 'all' ? true :
       activeFilter === 'pending' ? s.current_status === 'In Testing' :
       activeFilter === 'logged' ? s.current_status === 'Issue Logged' :
-      activeFilter === 'qa_passed' ? s.current_status === 'QA Passed' :
+      activeFilter === 'qa_passed' ? (s.current_status === 'QA Passed' || s.current_status === 'Pending Admin') :
       activeFilter === 'passed' ? s.current_status === 'Published' : true;
     return matchesSearch && matchesTab;
   });
@@ -237,10 +238,7 @@ export function Tester({ onLogout }) {
           <SidebarItem icon={<FaHome />} label="My Assets" active={activeFilter === 'all'} onClick={() => setActiveFilter('all')} />
           <SidebarItem icon={<FaClock className="text-blue-400" />} label="In Testing" count={stats.pending} active={activeFilter === 'pending'} onClick={() => setActiveFilter('pending')} />
           <SidebarItem icon={<FaExclamationTriangle className="text-rose-400" />} label="Issues Found" count={stats.logged} active={activeFilter === 'logged'} onClick={() => setActiveFilter('logged')} />
-          
-          {/* NEW QA PASSED SIDEBAR ITEM */}
           <SidebarItem icon={<FaCheckCircle className="text-cyan-400" />} label="QA Passed" count={stats.qaPassed} active={activeFilter === 'qa_passed'} onClick={() => setActiveFilter('qa_passed')} />
-          
           <SidebarItem icon={<FaCheckDouble className="text-emerald-400" />} label="Published Section" count={stats.published} active={activeFilter === 'passed'} onClick={() => setActiveFilter('passed')} />
         </nav>
         <div className="p-6 border-t border-slate-800">
@@ -285,7 +283,7 @@ export function Tester({ onLogout }) {
           </div>
         </header>
 
-        {/* UPDATED STATUS CARDS GRID */}
+        {/* STATUS CARDS GRID */}
         <div className="grid grid-cols-5 gap-4 mb-10">
           <StatusCard label="Total" count={stats.total} icon={<FaListUl />} color="bg-slate-100 text-slate-600" />
           <StatusCard label="Pending" count={stats.pending} icon={<FaClock />} color="bg-blue-50 text-blue-600" />
@@ -308,7 +306,8 @@ export function Tester({ onLogout }) {
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filteredSections.map(item => {
-                    const isFinalized = ['Published', 'Ready for Store', 'QA Passed'].includes(item.current_status);
+                    // UPDATED: Include Pending Admin in finalized statuses
+                    const isFinalized = ['Published', 'Ready for Store', 'QA Passed', 'Pending Admin'].includes(item.current_status);
                     return (
                       <tr key={item.id} onClick={() => openReview(item)} className={`group transition-all ${isFinalized ? 'cursor-default opacity-80' : 'cursor-pointer hover:bg-slate-50'} ${selectedSection?.id === item.id ? 'bg-purple-50' : ''}`}>
                         <td className="px-8 py-6">
@@ -321,6 +320,7 @@ export function Tester({ onLogout }) {
                           <button onClick={(e) => { e.stopPropagation(); handleDownload(item.id, item.title); }} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl mr-2 transition-colors"><FaDownload /></button>
                           <span className={`px-4 py-1.5 rounded-full text-[9px] font-black border uppercase 
                             ${item.current_status === 'Published' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                              item.current_status === 'Pending Admin' ? 'bg-amber-50 text-amber-600 border-amber-100' : 
                               item.current_status === 'QA Passed' ? 'bg-cyan-50 text-cyan-600 border-cyan-100' :
                               item.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' : 
                               'bg-blue-50 text-blue-600 border-blue-100'}`}>
@@ -363,7 +363,7 @@ export function Tester({ onLogout }) {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {!editingIssueId && <button onClick={() => handleUpdateStatus(selectedSection.id, 'QA Passed')} className="w-full py-6 bg-emerald-500 text-white rounded-4xl font-black uppercase italic tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200">Pass Quality Check</button>}
+                    {!editingIssueId && <button onClick={() => handleUpdateStatus(selectedSection.id, 'QA Passed')} className="w-full py-6 bg-emerald-500 text-white rounded-4xl font-black uppercase italic tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200">Send to Admin for Approval</button>}
 
                     <div className={`p-8 rounded-[2.5rem] border transition-all space-y-4 ${editingIssueId ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-100'}`}>
                       <div className="flex flex-wrap gap-2">

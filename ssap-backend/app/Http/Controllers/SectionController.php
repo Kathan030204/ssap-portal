@@ -70,6 +70,11 @@ class SectionController extends Controller
             $section->tester_id = $request->tester_id;
             $section->current_status = $request->current_status ?? 'In Testing';
         }
+        // --- 1. HANDLE ADMIN TASK ASSIGNMENT ---
+        if ($request->has('designer_id')) {
+            $section->designer_id = $request->designer_id;
+            $section->current_status = $request->current_status ?? 'Pending Admin';
+        }
 
         // --- 2. HANDLE STATUS UPDATES ---
         if ($request->has('current_status')) {
@@ -106,26 +111,34 @@ class SectionController extends Controller
     }
 
     public function download($id) {
-    $section = Section::find($id);
+        $section = Section::find($id);
 
-    if (!$section || !$section->zip_url) {
-        return response()->json(['message' => 'File path not found'], 404);
+        if (!$section || !$section->zip_url) {
+            return response()->json(['message' => 'File path not found'], 404);
+        }
+
+        if (!Storage::disk('local')->exists($section->zip_url)) {
+            return response()->json(['message' => 'File missing on server'], 404);
+        }
+
+        // Get original mime type (e.g., application/zip or image/png)
+        $mimeType = Storage::disk('local')->mimeType($section->zip_url);
+        $path = Storage::disk('local')->path($section->zip_url);
+
+        // Clean buffer to prevent corruption
+        if (ob_get_level()) ob_end_clean();
+
+        return response()->download($path, basename($section->zip_url), [
+            'Content-Type' => $mimeType,
+            'Access-Control-Expose-Headers' => 'Content-Disposition'
+        ]);
     }
-
-    if (!Storage::disk('local')->exists($section->zip_url)) {
-        return response()->json(['message' => 'File missing on server'], 404);
+    
+    public function getDesignerTasks(Request $request, $designerId) {
+        // Fetches sections where the designer_id matches the logged-in designer
+        $sections = Section::where('designer_id', $designerId)
+                           ->with('issues')
+                           .get();
+        return response()->json($sections);
     }
-
-    // Get original mime type (e.g., application/zip or image/png)
-    $mimeType = Storage::disk('local')->mimeType($section->zip_url);
-    $path = Storage::disk('local')->path($section->zip_url);
-
-    // Clean buffer to prevent corruption
-    if (ob_get_level()) ob_end_clean();
-
-    return response()->download($path, basename($section->zip_url), [
-        'Content-Type' => $mimeType,
-        'Access-Control-Expose-Headers' => 'Content-Disposition'
-    ]);
-}
 }

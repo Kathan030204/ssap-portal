@@ -8,7 +8,8 @@ import {
     FaMobileAlt,
     FaChartLine, FaTrophy, FaClock,
     FaSignOutAlt, FaUserShield, FaEye, FaRegImage, FaUserCircle, FaSearch,
-    FaEdit, FaExclamationTriangle, FaCheckCircle
+    FaEdit, FaExclamationTriangle, FaCheckCircle,
+    FaPalette
 } from 'react-icons/fa';
 
 const api = axios.create({ baseURL: 'http://localhost:8000/api' });
@@ -91,7 +92,7 @@ export function Admin({ onLogout }) {
     const closeAlert = () => setNotification({ message: '', type: 'success' });
 
     // CONFIRMATION STATE
-    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => { } });
     const closeConfirm = () => setConfirmModal({ ...confirmModal, isOpen: false });
 
     // MODAL & FORM STATES
@@ -245,6 +246,22 @@ export function Admin({ onLogout }) {
         } catch { showAlert("Assignment failed.", 'error'); }
     };
 
+    // Logic for Designer Allocation
+    const handleAssignDesigner = async (sectionId, designerId) => {
+        if (!designerId) return;
+        try {
+            // We update the designer_id and move the status to 'In Design'
+            await api.put(`/sections/${sectionId}`, {
+                designer_id: designerId,
+                current_status: 'In Design'
+            });
+            showAlert("Task successfully allocated to Designer!");
+            fetchInitialData(); // Refresh the lists
+        } catch {
+            showAlert("Allocation failed. Please try again.", "error");
+        }
+    };
+
     const openAssetsViewer = async (section) => {
         setSelectedSection(section);
         setIsAssetsModalOpen(true);
@@ -296,6 +313,15 @@ export function Admin({ onLogout }) {
 
     const testers = accounts.filter(acc => acc.role === 'tester');
     const getWorkload = (id) => sections.filter(s => s.tester_id === id && s.current_status === 'In Testing').length;
+
+    // Filter for designers
+    const designers = accounts.filter(acc => acc.role === 'designer');
+
+    // Calculate workload for designers 
+    // (Counts sections assigned to them that are currently in the design phase)
+    const getDesignerWorkload = (id) => sections.filter(s =>
+        s.designer_id === id && s.current_status === 'In Design'
+    ).length;
 
     const calculateAvgTime = () => {
         const published = sections.filter(s => s.current_status === 'Published' && s.updated_at);
@@ -411,6 +437,43 @@ export function Admin({ onLogout }) {
                                                     </div>
                                                 ))
                                             ) : <p className="text-slate-400 italic text-center py-8">Queue is clear.</p>}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* --- NEW: DESIGNER ALLOCATION QUEUE --- */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                    <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                                        <h3 className="font-black text-xl mb-6 flex items-center gap-2">
+                                            <FaPalette className="text-indigo-500" /> Designer Allocation
+                                        </h3>
+                                        <div className="space-y-4">
+                                            {sections.filter(s => s.current_status === 'Pending Admin' && !s.designer_id).length > 0 ? (
+                                                sections.filter(s => s.current_status === 'Pending Admin' && !s.designer_id).map(sec => (
+                                                    <div key={sec.id} className="flex items-center justify-between p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-slate-800">{sec.title}</span>
+                                                            <span className="text-[10px] text-indigo-600 font-black uppercase tracking-tight">Passed by Tester</span>
+                                                        </div>
+                                                        <select
+                                                            onChange={(e) => handleAssignDesigner(sec.id, e.target.value)}
+                                                            className="bg-white border p-2 rounded-lg text-sm font-bold shadow-sm outline-none cursor-pointer hover:border-indigo-400 transition-colors"
+                                                            defaultValue=""
+                                                        >
+                                                            <option value="" disabled>Allocate Designer...</option>
+                                                            {designers.map(d => (
+                                                                <option key={d.id} value={d.id}>
+                                                                    {d.username} (Load: {getDesignerWorkload(d.id)})
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="text-center py-8">
+                                                    <p className="text-slate-400 italic">No tasks awaiting design allocation.</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

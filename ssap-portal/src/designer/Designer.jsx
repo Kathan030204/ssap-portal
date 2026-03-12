@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import {
   FaPalette, FaImage, FaDesktop, FaMobileAlt,
@@ -9,7 +9,7 @@ import {
 
 const api = axios.create({ baseURL: 'http://localhost:8000/api' });
 
-// --- NEW COMPONENT: ALERT MODAL ---
+// --- ALERT MODAL COMPONENT ---
 function AlertModal({ isOpen, type, title, message, onClose }) {
   if (!isOpen) return null;
   const isError = type === 'error';
@@ -37,14 +37,22 @@ export function Designer({ onLogout }) {
   const [sections, setSections] = useState([]);
   const [selectedSectionId, setSelectedSectionId] = useState(null);
   const [viewFilter, setViewFilter] = useState('all');
-  
-  // --- MODAL STATE ---
   const [modalConfig, setModalConfig] = useState({ isOpen: false, type: 'success', title: '', message: '' });
 
-  // --- AUTH STATE ---
-  const [currentUser, setCurrentUser] = useState({ id: null, name: 'Designer', role: 'Designer' });
+  // Initialize state directly from storage to prevent cascading renders
+  const [currentUser] = useState(() => {
+    const storedUser = sessionStorage.getItem('user') || localStorage.getItem('user');
+    if (storedUser) {
+      const savedUser = JSON.parse(storedUser);
+      return {
+        id: savedUser.id || 'N/A',
+        name: savedUser.username || savedUser.name || savedUser.display_name || "Designer",
+        role: savedUser.role || "Designer"
+      };
+    }
+    return { id: null, name: 'Designer', role: 'Designer' };
+  });
 
-  // --- NOTIFICATION STATE ---
   const [notifications, setNotifications] = useState([]);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifRef = useRef(null);
@@ -55,55 +63,49 @@ export function Designer({ onLogout }) {
     banner: []
   });
 
-  const showAlert = (type, title, message) => {
+  const showAlert = useCallback((type, title, message) => {
     setModalConfig({ isOpen: true, type, title, message });
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotifDropdown(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fetchDesignTasks = async () => {
+  // Fetch logic filtered by designer_id
+  const fetchDesignTasks = useCallback(async () => {
     try {
-      const response = await api.get('/sections');
-      const allSections = response.data;
-      setSections(allSections);
+      if (!currentUser.id || currentUser.id === 'N/A') return;
 
-      const actionable = allSections.filter(s => 
-        s.current_status === 'QA Passed' || s.current_status === 'Rejected by Admin'
+      const response = await api.get('/sections');
+      // Filter by the designer_id of the current logged-in user
+      const myData = response.data.filter(s => s.designer_id === currentUser.id);
+      
+      setSections(myData);
+
+      const actionable = myData.filter(s => 
+        s.current_status === 'In Design' || s.current_status === 'Rejected by Admin'
       );
       
       const alerts = actionable.map(s => ({
         id: s.id,
         title: s.title,
         status: s.current_status,
-        msg: s.current_status === 'Rejected by Admin' ? "REJECTED BY ADMIN" : "QA PASSED",
-        time: "Action Required"
+        msg: s.current_status === 'Rejected by Admin' ? "REJECTED BY ADMIN" : "IN DESIGN",
       }));
       setNotifications(alerts);
     } catch (error) {
       console.error("Fetch error:", error);
     }
-  };
+  }, [currentUser.id]);
 
   useEffect(() => {
-    const storedUser = sessionStorage.getItem('user') || localStorage.getItem('user');
-    if (storedUser) {
-      const savedUser = JSON.parse(storedUser);
-      setCurrentUser({
-        id: savedUser.id || 'N/A',
-        name: savedUser.username || savedUser.name || savedUser.display_name || "Designer",
-        role: savedUser.role || "Designer"
-      });
-    }
+    const handleClickOutside = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotifDropdown(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
     fetchDesignTasks();
     const interval = setInterval(fetchDesignTasks, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      clearInterval(interval);
+    };
+  }, [fetchDesignTasks]);
 
   useEffect(() => {
     setPendingAssets({ desktop: [], mobile: [], banner: [] });
@@ -115,23 +117,18 @@ export function Designer({ onLogout }) {
     setShowNotifDropdown(false);
   };
 
-  const handleClosePipeline = () => {
-    setSelectedSectionId(null);
-  };
-
   const getStatusClasses = (status) => {
     switch (status) {
-      case 'In Testing': return 'text-blue-600 bg-blue-100';
-      case 'Issue Logged': return 'text-rose-600 bg-rose-100';
       case 'Rejected by Admin': return 'text-white bg-rose-600 border border-rose-700 animate-pulse';
-      case 'QA Passed': return 'text-indigo-600 bg-indigo-100 border border-indigo-200';
-      default: return 'text-emerald-600 bg-emerald-100';
+      case 'In Design': return 'text-indigo-600 bg-indigo-100 border border-indigo-200';
+      case 'Published': return 'text-emerald-600 bg-emerald-100';
+      default: return 'text-slate-600 bg-slate-100';
     }
   };
 
   const displaySections = sections.filter(s => {
-    if (viewFilter === 'all') return s.current_status === 'QA Passed' || s.current_status === 'Published' || s.current_status === 'Rejected by Admin';
-    if (viewFilter === 'passed') return s.current_status === 'QA Passed';
+    if (viewFilter === 'all') return ['In Design', 'Published', 'Rejected by Admin', 'Ready for Store'].includes(s.current_status);
+    if (viewFilter === 'passed') return s.current_status === 'In Design';
     if (viewFilter === 'rejected') return s.current_status === 'Rejected by Admin';
     if (viewFilter === 'ready') return s.current_status === 'Ready for Store';
     if (viewFilter === 'published') return s.current_status === 'Published';
@@ -141,11 +138,10 @@ export function Designer({ onLogout }) {
   const showPipeline = (viewFilter === 'passed' || viewFilter === 'rejected') && selectedSectionId !== null;
 
   const stats = {
-    total: sections.filter(s => ['QA Passed', 'Published', 'Rejected by Admin'].includes(s.current_status)).length,
-    passed: sections.filter(s => s.current_status === 'QA Passed').length,
+    total: sections.length,
+    passed: sections.filter(s => s.current_status === 'In Design').length,
     rejected: sections.filter(s => s.current_status === 'Rejected by Admin').length,
-    published: sections.filter(s => s.current_status === 'Published').length,
-    completed: sections.filter(s => ['Published', 'Ready for Store'].includes(s.current_status)).length
+    published: sections.filter(s => s.current_status === 'Published').length
   };
 
   const selectedSection = sections.find(s => s.id === selectedSectionId);
@@ -168,7 +164,7 @@ export function Designer({ onLogout }) {
   const handleFinalSubmit = async () => {
     const totalFiles = [...pendingAssets.desktop, ...pendingAssets.mobile, ...pendingAssets.banner].length;
     if (totalFiles === 0) {
-      showAlert('error', 'Selection Empty', 'Please select at least one asset to upload before finalizing.');
+      showAlert('error', 'Selection Empty', 'Please select at least one asset to upload.');
       return;
     }
     setLoading(true);
@@ -180,20 +176,17 @@ export function Designer({ onLogout }) {
           formData.append('image_url', file);
           formData.append('section_id', selectedSectionId);
           formData.append('image_type', type);
-          uploadPromises.push(api.post('/design', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          }));
+          uploadPromises.push(api.post('/design', formData));
         });
       });
       await Promise.all(uploadPromises);
       await api.put(`/sections/${selectedSectionId}`, { current_status: 'Ready for Store' });
       
-      showAlert('success', 'Sync Complete', 'Package has been submitted and moved to Store Readiness.');
-      
+      showAlert('success', 'Sync Complete', 'Assets submitted successfully.');
       setSelectedSectionId(null);
       fetchDesignTasks();
     } catch {
-      showAlert('error', 'Upload Failed', 'The server rejected the assets. Check connection or file formats.');
+      showAlert('error', 'Upload Failed', 'The server rejected the assets.');
     } finally {
       setLoading(false);
     }
@@ -202,36 +195,27 @@ export function Designer({ onLogout }) {
   const handleDownload = async (sectionId, title) => {
     try {
       const response = await api.get(`/sections/${sectionId}/download`, { responseType: 'blob' });
-      const blob = new Blob([response.data], { type: response.headers['content-type'] });
-      const url = window.URL.createObjectURL(blob);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.zip`);
+      link.setAttribute('download', `${title.replace(/\s+/g, '_').toLowerCase()}.zip`);
       document.body.appendChild(link);
       link.click();
       link.remove();
     } catch {
-      showAlert('error', 'Download Error', 'Could not retrieve the zip package from the repository.');
+      showAlert('error', 'Download Error', 'Could not retrieve the zip package.');
     }
   };
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-      {/* GLOBAL MODAL COMPONENT */}
-      <AlertModal 
-        isOpen={modalConfig.isOpen}
-        type={modalConfig.type}
-        title={modalConfig.title}
-        message={modalConfig.message}
-        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
-      />
+      <AlertModal {...modalConfig} onClose={() => setModalConfig({ ...modalConfig, isOpen: false })} />
 
       <aside className="w-64 bg-slate-900 text-white flex flex-col shrink-0 fixed h-full z-20">
         <div className="p-8 text-xl font-black italic flex items-center gap-3 border-b border-slate-800">
           <FaPalette className="text-indigo-400" /> Designer Hub
         </div>
         <nav className="flex-1 px-4 py-6 space-y-1">
-          <p className="text-[10px] font-black text-slate-500 uppercase px-4 mb-2 tracking-widest">Workflow</p>
           <button onClick={() => { setViewFilter('all'); setSelectedSectionId(null); }}
             className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all ${viewFilter === 'all' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
             <FaListUl /> All Sections
@@ -245,7 +229,6 @@ export function Designer({ onLogout }) {
             <FaCheckCircle /> QA Passed
           </button>
           <div className="pt-4 mt-4 border-t border-slate-800">
-            <p className="text-[10px] font-black text-slate-500 uppercase px-4 mb-2 tracking-widest">Archive</p>
             <button onClick={() => { setViewFilter('ready'); setSelectedSectionId(null); }}
               className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all ${viewFilter === 'ready' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
               <FaStore /> Ready for Store
@@ -260,11 +243,11 @@ export function Designer({ onLogout }) {
           <div className="flex items-center gap-3 px-4 py-3 mb-2 text-white">
             <FaUserCircle size={20} className="text-indigo-400" />
             <div className="overflow-hidden">
-              <p className="font-black text-sm leading-none truncate w-32 uppercase">{currentUser.name}</p>
-              <p className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mt-1">{currentUser.role}</p>
+              <p className="font-black text-sm truncate w-32 uppercase">{currentUser.name}</p>
+              <p className="text-slate-500 text-[9px] uppercase font-bold tracking-widest">{currentUser.role}</p>
             </div>
           </div>
-          <button onClick={() => { sessionStorage.clear(); onLogout(); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-rose-400 transition-all font-black text-xs uppercase tracking-widest">
+          <button onClick={() => { sessionStorage.clear(); onLogout(); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-rose-400 font-black text-xs uppercase tracking-widest">
             <FaSignOutAlt /> Sign Out
           </button>
         </div>
@@ -279,7 +262,7 @@ export function Designer({ onLogout }) {
             </div>
             <div className="relative" ref={notifRef}>
               <button onClick={() => setShowNotifDropdown(!showNotifDropdown)}
-                className={`p-4 rounded-2xl bg-white border border-slate-200 text-slate-400 transition-all relative ${notifications.length > 0 ? 'shadow-xl shadow-indigo-100 border-indigo-100' : ''}`}>
+                className={`p-4 rounded-2xl bg-white border border-slate-200 text-slate-400 transition-all relative ${notifications.length > 0 ? 'shadow-xl border-indigo-100' : ''}`}>
                 <FaBell size={22} />
                 {notifications.length > 0 && <span className="absolute top-3 right-3 w-3.5 h-3.5 bg-rose-500 border-2 border-white rounded-full"></span>}
               </button>
@@ -300,10 +283,10 @@ export function Designer({ onLogout }) {
           </header>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-            <StatCard label="Master Library" val={stats.total} icon={<FaLayerGroup className='text-slate-400' />} color="text-slate-400" />
-            <StatCard label="Awaiting Assets" val={stats.passed} icon={<FaCheckCircle className='text-indigo-500' />} color="text-indigo-500" />
-            <StatCard label="Admin Rejections" val={stats.rejected} icon={<FaExclamationTriangle className='text-rose-500' />} color="text-rose-500" />
-            <StatCard label="Published" val={stats.published} icon={<FaCheckCircle className='text-green-500' />} color="text-green-500" />
+            <StatCard label="My Tasks" val={stats.total} icon={<FaLayerGroup />} color="text-slate-400" />
+            <StatCard label="QA Passed" val={stats.passed} icon={<FaCheckCircle />} color="text-indigo-500" />
+            <StatCard label="Rejected" val={stats.rejected} icon={<FaExclamationTriangle />} color="text-rose-500" />
+            <StatCard label="Published" val={stats.published} icon={<FaRocket />} color="text-emerald-500" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -319,7 +302,10 @@ export function Designer({ onLogout }) {
                     <div className={`p-4 rounded-2xl ${selectedSectionId === section.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
                       <FaImage size={20} />
                     </div>
-                    <h3 className="font-bold text-lg">{section.title}</h3>
+                    <div>
+                      <h3 className="font-bold text-lg">{section.title}</h3>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">{section.section_ref}</p>
+                    </div>
                   </div>
                   <div className="flex gap-4 items-center">
                     <button onClick={(e) => {e.stopPropagation(); handleDownload(section.id, section.title)}} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl">
@@ -338,26 +324,15 @@ export function Designer({ onLogout }) {
                 <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm sticky top-10">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="font-black text-xl italic flex items-center gap-2">
-                        <FaCloudUploadAlt className={selectedSection?.current_status === 'Rejected by Admin' ? "text-rose-600" : "text-indigo-600"} /> 
-                        {selectedSection?.current_status === 'Rejected by Admin' ? 'Corrective Upload' : 'Asset Pipeline'}
+                        <FaCloudUploadAlt className="text-indigo-600" /> Asset Pipeline
                     </h3>
-                    <button 
-                        onClick={handleClosePipeline}
-                        className="p-2 bg-slate-100 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors"
-                    >
+                    <button onClick={() => setSelectedSectionId(null)} className="p-2 bg-slate-100 text-slate-400 hover:text-rose-500 rounded-full">
                         <FaTimes size={16} />
                     </button>
                   </div>
 
                   {selectedSection && (
                     <div className="space-y-4">
-                      {selectedSection.current_status === 'Rejected by Admin' && (
-                        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl mb-4 text-xs text-rose-600 font-bold flex gap-2">
-                           <FaExclamationTriangle className="shrink-0" />
-                           Admin rejected assets. Please re-upload corrected versions.
-                        </div>
-                      )}
-                      
                       <div className="mb-4">
                          <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Selected Section</p>
                          <p className="font-bold text-slate-900 truncate">{selectedSection.title}</p>
@@ -405,7 +380,8 @@ function StatCard({ label, val, icon, color }) {
     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
       <p className={`text-[10px] font-black uppercase tracking-wider ${color}`}>{label}</p>
       <div className="flex justify-between items-end mt-1 font-black text-3xl text-slate-900">
-        {val} <span className="text-2xl opacity-40">{icon}</span>
+        <span>{val}</span>
+        <span className="text-slate-100 text-xl">{icon}</span>
       </div>
     </div>
   );
