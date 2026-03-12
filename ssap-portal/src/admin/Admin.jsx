@@ -12,6 +12,25 @@ import {
 
 const api = axios.create({ baseURL: 'http://localhost:8000/api' });
 
+// --- HELPER COMPONENT FOR STATUS BADGES ---
+const StatusBadge = ({ status }) => {
+    const statusConfig = {
+        'Published': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+        'Ready for Store': 'bg-blue-100 text-blue-700 border-blue-200',
+        'In Testing': 'bg-amber-100 text-amber-700 border-amber-200',
+        'Issue Logged': 'bg-rose-100 text-rose-700 border-rose-200',
+        'Rejected by Admin': 'bg-red-600 text-white border-red-700 shadow-sm',
+    };
+
+    const style = statusConfig[status] || 'bg-slate-100 text-slate-600 border-slate-200';
+
+    return (
+        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${style}`}>
+            {status}
+        </span>
+    );
+};
+
 export function Admin({ onLogout }) {
     const [activeTab, setActiveTab] = useState('home');
     const [accounts, setAccounts] = useState([]);
@@ -28,7 +47,7 @@ export function Admin({ onLogout }) {
     // ASSETS VIEWER STATES
     const [isAssetsModalOpen, setIsAssetsModalOpen] = useState(false);
     const [selectedSection, setSelectedSection] = useState(null);
-    const [sectionDesigns, setSectionDesigns] = useState([]); 
+    const [sectionDesigns, setSectionDesigns] = useState([]);
     const [assetsLoading, setAssetsLoading] = useState(false);
 
     const [formData, setFormData] = useState({ username: '', email: '', password: '', role: 'creator' });
@@ -66,12 +85,9 @@ export function Admin({ onLogout }) {
     }, [fetchInitialData, onLogout]);
 
     // --- 2. ACTION HANDLERS ---
-    
-    // NEW: Handle Admin Rejection of Assets
     const handleRejectAssets = async (id) => {
         if (!window.confirm("Reject these image assets? This will notify the Designer immediately and skip the Creator/Tester loop.")) return;
         try {
-            // Update status to a specific flag that the Designer's dashboard should listen for
             await api.put(`/sections/${id}`, { current_status: 'Rejected by Admin' });
             alert("Assets rejected. Sent to Designer.");
             fetchInitialData();
@@ -180,7 +196,7 @@ export function Admin({ onLogout }) {
     // --- 4. ANALYTICS ---
     const testers = accounts.filter(acc => acc.role === 'tester');
     const getWorkload = (id) => sections.filter(s => s.tester_id === id && s.current_status === 'In Testing').length;
-    
+
     const calculateAvgTime = () => {
         const published = sections.filter(s => s.current_status === 'Published' && s.updated_at);
         if (published.length === 0) return "0 Days";
@@ -324,15 +340,9 @@ export function Admin({ onLogout }) {
                                                     <td className="px-6 py-4 text-xs font-mono text-slate-400 uppercase">SEC-{sec.id}</td>
                                                     <td className="px-6 py-4 font-bold">{sec.title}</td>
                                                     <td className="px-6 py-4">
-                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase 
-                                                            ${sec.current_status === 'Published' ? 'bg-emerald-100 text-emerald-600' : 
-                                                              sec.current_status === 'Rejected by Admin' ? 'bg-rose-100 text-rose-600' :
-                                                              'bg-amber-100 text-amber-600'}`}>
-                                                            {sec.current_status}
-                                                        </span>
+                                                        <StatusBadge status={sec.current_status} />
                                                     </td>
                                                     <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                                        {/* REJECT BUTTON: Only visible if Ready for Store */}
                                                         {sec.current_status === 'Ready for Store' && (
                                                             <button 
                                                                 onClick={() => handleRejectAssets(sec.id)}
@@ -384,9 +394,9 @@ export function Admin({ onLogout }) {
                                             <div key={sec.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex justify-between items-center transition-all hover:shadow-md">
                                                 <div>
                                                     <h3 className="text-xl font-black">{sec.title}</h3>
-                                                    <p className={`text-xs font-bold uppercase ${sec.current_status === 'Issue Logged' ? 'text-rose-500' : sec.current_status === 'Published' ? 'text-emerald-500' : 'text-indigo-500'}`}>
-                                                        {sec.current_status}
-                                                    </p>
+                                                    <div className="mt-1">
+                                                        <StatusBadge status={sec.current_status} />
+                                                    </div>
                                                 </div>
                                                 <div className="flex gap-3">
                                                     {sec.current_status === 'Published' ? (
@@ -394,7 +404,7 @@ export function Admin({ onLogout }) {
                                                             <FaUndo /> Emergency Rollback
                                                         </button>
                                                     ) : sec.current_status === 'Issue Logged' ? (
-                                                        <span className="bg-rose-50 text-rose-500 px-4 py-2 rounded-xl font-black text-xs border border-rose-100">ROLLED BACK</span>
+                                                        <span className="bg-rose-50 text-rose-500 px-4 py-2 rounded-xl font-black text-xs border border-rose-100 uppercase">ROLLED BACK</span>
                                                     ) : (
                                                         <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black flex items-center gap-2 hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all">
                                                             <FaRocket /> Publish to Store
@@ -503,10 +513,10 @@ export function Admin({ onLogout }) {
                             <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><FaTimes /></button>
                         </div>
                         <form onSubmit={handleCreateAccount} className="p-8 space-y-4">
-                            <input required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 font-bold" placeholder="Username" onChange={(e) => setFormData({ ...formData, username: e.target.value })} />
-                            <input type="email" required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 font-bold" placeholder="Email Address" onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
-                            <input type="password" required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 font-bold" placeholder="Set Password" onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
-                            <select className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold" onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
+                            <input required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 font-bold" placeholder="Username" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} />
+                            <input type="email" required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 font-bold" placeholder="Email Address" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                            <input type="password" required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 font-bold" placeholder="Set Password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
+                            <select className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold" value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
                                 <option value="creator">Creator (Dev)</option>
                                 <option value="tester">Tester (QA Lab)</option>
                                 <option value="designer">Designer (Studio)</option>
