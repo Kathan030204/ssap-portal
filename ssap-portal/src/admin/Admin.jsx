@@ -7,7 +7,8 @@ import {
     FaDesktop,
     FaMobileAlt,
     FaChartLine, FaTrophy, FaClock,
-    FaSignOutAlt, FaUserShield, FaEye, FaRegImage, FaUserCircle, FaSearch
+    FaSignOutAlt, FaUserShield, FaEye, FaRegImage, FaUserCircle, FaSearch,
+    FaEdit
 } from 'react-icons/fa';
 
 const api = axios.create({ baseURL: 'http://localhost:8000/api' });
@@ -36,7 +37,12 @@ export function Admin({ onLogout }) {
     const [accounts, setAccounts] = useState([]);
     const [sections, setSections] = useState([]);
     const [loading, setLoading] = useState(true);
+    
+    // MODAL & FORM STATES
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editingUserId, setEditingUserId] = useState(null);
+    const [formData, setFormData] = useState({ username: '', email: '', password: '', role: 'creator' });
 
     // FILTERS
     const [approvalSearch, setApprovalSearch] = useState('');
@@ -50,7 +56,6 @@ export function Admin({ onLogout }) {
     const [sectionDesigns, setSectionDesigns] = useState([]);
     const [assetsLoading, setAssetsLoading] = useState(false);
 
-    const [formData, setFormData] = useState({ username: '', email: '', password: '', role: 'creator' });
     const [adminUser, setAdminUser] = useState({ username: 'Administrator', role: 'Super Admin' });
 
     // --- 1. DATA FETCHING ---
@@ -85,6 +90,55 @@ export function Admin({ onLogout }) {
     }, [fetchInitialData, onLogout]);
 
     // --- 2. ACTION HANDLERS ---
+    
+    // USER MANAGEMENT LOGIC
+    const openCreateModal = () => {
+        setIsEditMode(false);
+        setEditingUserId(null);
+        setFormData({ username: '', email: '', password: '', role: 'creator' });
+        setIsModalOpen(true);
+    };
+
+    const openEditModal = (user) => {
+        setIsEditMode(true);
+        setEditingUserId(user.id);
+        setFormData({ 
+            username: user.username, 
+            email: user.email, 
+            password: '', // Password empty by default during edit
+            role: user.role 
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleSubmitAccount = async (e) => {
+        e.preventDefault();
+        try {
+            if (isEditMode) {
+                // UPDATE EXISTING
+                await api.put(`/accounts/${editingUserId}`, formData);
+                alert("Account updated successfully.");
+            } else {
+                // CREATE NEW
+                await api.post('/accounts', formData);
+                alert("Account created successfully.");
+            }
+            setIsModalOpen(false);
+            fetchInitialData();
+        } catch  {
+            alert(isEditMode ? "Error updating account." : "Error creating account.");
+        }
+    };
+
+    const handleDeleteAccount = async (id) => {
+        if (!window.confirm("Delete this user permanently?")) return;
+        try {
+            await api.delete(`/accounts/${id}`);
+            fetchInitialData();
+        } catch { alert("Delete failed."); }
+    };
+
+    // SECTION & STATUS LOGIC
     const handleRejectAssets = async (id) => {
         if (!window.confirm("Reject these image assets? This will notify the Designer immediately and skip the Creator/Tester loop.")) return;
         try {
@@ -175,25 +229,7 @@ export function Admin({ onLogout }) {
         onLogout();
     };
 
-    const handleCreateAccount = async (e) => {
-        e.preventDefault();
-        try {
-            await api.post('/accounts', formData);
-            setIsModalOpen(false);
-            setFormData({ username: '', email: '', password: '', role: 'creator' });
-            fetchInitialData();
-        } catch { alert("Error creating account."); }
-    };
-
-    const handleDeleteAccount = async (id) => {
-        if (!window.confirm("Delete this user permanently?")) return;
-        try {
-            await api.delete(`/accounts/${id}`);
-            fetchInitialData();
-        } catch { alert("Delete failed."); }
-    };
-
-    // --- 4. ANALYTICS ---
+    // --- 4. ANALYTICS & HELPERS ---
     const testers = accounts.filter(acc => acc.role === 'tester');
     const getWorkload = (id) => sections.filter(s => s.tester_id === id && s.current_status === 'In Testing').length;
 
@@ -422,7 +458,7 @@ export function Admin({ onLogout }) {
                             <div className="space-y-6">
                                 <div className="flex justify-between items-center">
                                     <h2 className="text-3xl font-black">User & Role Permissions</h2>
-                                    <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2"><FaPlus /> Create Member</button>
+                                    <button onClick={openCreateModal} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2"><FaPlus /> Create Member</button>
                                 </div>
                                 <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
                                     <table className="w-full text-left">
@@ -440,8 +476,21 @@ export function Admin({ onLogout }) {
                                                     <td className="px-6 py-4 font-bold text-slate-500">{acc.id}</td>
                                                     <td className="px-6 py-4 font-black">{acc.username}</td>
                                                     <td className="px-6 py-4 font-black text-[10px] text-indigo-600 uppercase">{acc.role}</td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <button onClick={() => handleDeleteAccount(acc.id)} className="text-rose-400 hover:text-rose-600"><FaTrash /></button>
+                                                    <td className="px-6 py-4 text-right flex justify-end gap-3">
+                                                        <button 
+                                                            onClick={() => openEditModal(acc)} 
+                                                            className="text-blue-500 hover:text-blue-700 transition-colors"
+                                                            title="Edit User Role"
+                                                        >
+                                                            <FaEdit size={18} />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleDeleteAccount(acc.id)} 
+                                                            className="text-rose-400 hover:text-rose-600 transition-colors"
+                                                            title="Delete User"
+                                                        >
+                                                            <FaTrash size={16} />
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -504,25 +553,43 @@ export function Admin({ onLogout }) {
                 </div>
             )}
 
-            {/* CREATE USER MODAL */}
+            {/* CREATE / EDIT USER MODAL */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
                         <div className="p-6 border-b flex justify-between items-center bg-slate-50">
-                            <h3 className="text-xl font-black italic text-slate-800">New Member Access</h3>
-                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><FaTimes /></button>
+                            <h3 className="text-xl font-black italic text-slate-800">
+                                {isEditMode ? `Edit Profile: ${formData.username}` : "New Member Access"}
+                            </h3>
+                            <button onClick={() => { setIsModalOpen(false); setIsEditMode(false); }} className="text-slate-400 hover:text-slate-600">
+                                <FaTimes />
+                            </button>
                         </div>
-                        <form onSubmit={handleCreateAccount} className="p-8 space-y-4">
-                            <input required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 font-bold" placeholder="Username" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} />
-                            <input type="email" required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 font-bold" placeholder="Email Address" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
-                            <input type="password" required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 font-bold" placeholder="Set Password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
-                            <select className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold" value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
-                                <option value="creator">Creator (Dev)</option>
-                                <option value="tester">Tester (QA Lab)</option>
-                                <option value="designer">Designer (Studio)</option>
-                                <option value="admin">Super Admin</option>
-                            </select>
-                            <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-200 mt-4 uppercase tracking-widest">Authorize User</button>
+                        <form onSubmit={handleSubmitAccount} className="p-8 space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Username</label>
+                                <input required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 font-bold" placeholder="Username" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Email</label>
+                                <input type="email" required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 font-bold" placeholder="Email Address" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Password {isEditMode && '(Leave blank to keep current)'}</label>
+                                <input type="password" required={!isEditMode} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 ring-blue-500 font-bold" placeholder={isEditMode ? "••••••••" : "Set Password"} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">System Role</label>
+                                <select className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold cursor-pointer" value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
+                                    <option value="creator">Creator (Dev)</option>
+                                    <option value="tester">Tester (QA Lab)</option>
+                                    <option value="designer">Designer (Studio)</option>
+                                    <option value="admin">Super Admin</option>
+                                </select>
+                            </div>
+                            <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-200 mt-4 uppercase tracking-widest">
+                                {isEditMode ? "Save Changes" : "Authorize User"}
+                            </button>
                         </form>
                     </div>
                 </div>

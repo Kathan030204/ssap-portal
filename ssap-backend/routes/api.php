@@ -12,6 +12,8 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::apiResource('accounts', AccountController::class);
+Route::put('/accounts/{id}', [AccountController::class, 'update']);
+
 Route::post('/login', [AccountController::class, 'login']);
 Route::post('/reset-password', [AccountController::class, 'resetPassword']);
 
