@@ -621,18 +621,10 @@ export function Admin({ onLogout }) {
                                                     <td className="px-6 py-4 font-black">{acc.username}<br/><span className="text-slate-400 font-medium">{acc.email}</span></td>
                                                     <td className="px-6 py-4 font-black text-[10px] text-indigo-600 uppercase">{acc.role}</td>
                                                     <td className="px-6 py-4 text-right flex justify-end gap-10">
-                                                        <button
-                                                            onClick={() => openEditModal(acc)}
-                                                            className="text-blue-500 hover:text-blue-700 transition-colors"
-                                                            title="Edit User Role"
-                                                        >
+                                                        <button onClick={() => openEditModal(acc)} className="text-blue-500 hover:text-blue-700 transition-colors" title="Edit User Role">
                                                             <FaEdit size={18} />
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleDeleteAccount(acc.id)}
-                                                            className="text-rose-400 hover:text-rose-600 transition-colors"
-                                                            title="Delete User"
-                                                        >
+                                                        <button onClick={() => handleDeleteAccount(acc.id)} className="text-rose-400 hover:text-rose-600 transition-colors" title="Delete User">
                                                             <FaTrash size={16} />
                                                         </button>
                                                     </td>
