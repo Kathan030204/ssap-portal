@@ -21,7 +21,6 @@ const NotificationModal = ({ message, type, onClose }) => {
     return (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-110 flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden border border-slate-100">
-                <div className={`p-1 h-2 ${isError ? 'bg-rose-500' : 'bg-emerald-500'}`} />
                 <div className="p-8 text-center">
                     <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${isError ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}>
                         {isError ? <FaExclamationTriangle size={28} /> : <FaCheckCircle size={28} />}
