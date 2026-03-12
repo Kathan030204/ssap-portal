@@ -8,10 +8,37 @@ import {
     FaMobileAlt,
     FaChartLine, FaTrophy, FaClock,
     FaSignOutAlt, FaUserShield, FaEye, FaRegImage, FaUserCircle, FaSearch,
-    FaEdit
+    FaEdit, FaExclamationTriangle, FaCheckCircle
 } from 'react-icons/fa';
 
 const api = axios.create({ baseURL: 'http://localhost:8000/api' });
+
+// --- NEW NOTIFICATION MODAL COMPONENT ---
+const NotificationModal = ({ message, type, onClose }) => {
+    if (!message) return null;
+    const isError = type === 'error';
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-100 flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden border border-slate-100">
+                <div className={`p-1 h-2 ${isError ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                <div className="p-8 text-center">
+                    <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${isError ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}>
+                        {isError ? <FaExclamationTriangle size={28} /> : <FaCheckCircle size={28} />}
+                    </div>
+                    <h3 className="text-xl font-black text-slate-800 mb-2">{isError ? 'Action Failed' : 'Success!'}</h3>
+                    <p className="text-slate-500 font-bold text-sm leading-relaxed">{message}</p>
+                    <button
+                        onClick={onClose}
+                        className={`mt-6 w-full py-3 rounded-xl font-black text-white transition-all shadow-lg ${isError ? 'bg-rose-500 shadow-rose-100 hover:bg-rose-600' : 'bg-slate-900 shadow-slate-200 hover:bg-slate-800'}`}
+                    >
+                        ACKNOWLEDGE
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // --- HELPER COMPONENT FOR STATUS BADGES ---
 const StatusBadge = ({ status }) => {
@@ -22,9 +49,7 @@ const StatusBadge = ({ status }) => {
         'Issue Logged': 'bg-rose-100 text-rose-700 border-rose-200',
         'Rejected by Admin': 'bg-red-600 text-white border-red-700 shadow-sm',
     };
-
     const style = statusConfig[status] || 'bg-slate-100 text-slate-600 border-slate-200';
-
     return (
         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${style}`}>
             {status}
@@ -37,6 +62,11 @@ export function Admin({ onLogout }) {
     const [accounts, setAccounts] = useState([]);
     const [sections, setSections] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // NOTIFICATION STATE
+    const [notification, setNotification] = useState({ message: '', type: 'success' });
+    const showAlert = (message, type = 'success') => setNotification({ message, type });
+    const closeAlert = () => setNotification({ message: '', type: 'success' });
 
     // MODAL & FORM STATES
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,7 +88,6 @@ export function Admin({ onLogout }) {
 
     const [adminUser, setAdminUser] = useState({ username: 'Administrator', role: 'Super Admin' });
 
-    // --- 1. DATA FETCHING ---
     const fetchInitialData = useCallback(async () => {
         setLoading(true);
         try {
@@ -89,9 +118,6 @@ export function Admin({ onLogout }) {
         }
     }, [fetchInitialData, onLogout]);
 
-    // --- 2. ACTION HANDLERS ---
-
-    // USER MANAGEMENT LOGIC
     const openCreateModal = () => {
         setIsEditMode(false);
         setEditingUserId(null);
@@ -105,7 +131,7 @@ export function Admin({ onLogout }) {
         setFormData({
             username: user.username,
             email: user.email,
-            password: '', // Password empty by default during edit
+            password: '',
             role: user.role
         });
         setIsModalOpen(true);
@@ -115,18 +141,16 @@ export function Admin({ onLogout }) {
         e.preventDefault();
         try {
             if (isEditMode) {
-                // UPDATE EXISTING
                 await api.put(`/accounts/${editingUserId}`, formData);
-                alert("Account updated successfully.");
+                showAlert("Account updated successfully.");
             } else {
-                // CREATE NEW
                 await api.post('/accounts', formData);
-                alert("Account created successfully.");
+                showAlert("Account created successfully.");
             }
             setIsModalOpen(false);
             fetchInitialData();
         } catch {
-            alert(isEditMode ? "Error updating account." : "Error creating account.");
+            showAlert(isEditMode ? "Error updating account." : "Error creating account.", 'error');
         }
     };
 
@@ -134,19 +158,19 @@ export function Admin({ onLogout }) {
         if (!window.confirm("Delete this user permanently?")) return;
         try {
             await api.delete(`/accounts/${id}`);
+            showAlert("User removed from system.");
             fetchInitialData();
-        } catch { alert("Delete failed."); }
+        } catch { showAlert("Delete failed.", 'error'); }
     };
 
-    // SECTION & STATUS LOGIC
     const handleRejectAssets = async (id) => {
-        if (!window.confirm("Reject these image assets? This will notify the Designer immediately and skip the Creator/Tester loop.")) return;
+        if (!window.confirm("Reject these image assets? This will notify the Designer immediately.")) return;
         try {
             await api.put(`/sections/${id}`, { current_status: 'Rejected by Admin' });
-            alert("Assets rejected. Sent to Designer.");
+            showAlert("Assets rejected. Sent back to Designer Studio.");
             fetchInitialData();
         } catch {
-            alert("Rejection failed.");
+            showAlert("Rejection command failed.", 'error');
         }
     };
 
@@ -161,9 +185,10 @@ export function Admin({ onLogout }) {
                 : { current_status: newStatus };
 
             await api.put(`/sections/${id}`, payload);
+            showAlert(isRollback ? "Section rolled back." : "Section is now LIVE!");
             fetchInitialData();
         } catch {
-            alert("Update failed.");
+            showAlert("Update failed.", 'error');
         }
     };
 
@@ -174,12 +199,11 @@ export function Admin({ onLogout }) {
                 tester_id: testerId,
                 current_status: 'In Testing'
             });
-            alert("Tester assigned successfully.");
+            showAlert("Tester assigned successfully.");
             fetchInitialData();
-        } catch { alert("Assignment failed."); }
+        } catch { showAlert("Assignment failed.", 'error'); }
     };
 
-    // --- 3. ASSET VIEWER & DOWNLOADS ---
     const openAssetsViewer = async (section) => {
         setSelectedSection(section);
         setIsAssetsModalOpen(true);
@@ -221,7 +245,7 @@ export function Admin({ onLogout }) {
             document.body.appendChild(link);
             link.click();
             link.remove();
-        } catch { alert("Download failed."); }
+        } catch { showAlert("Download failed.", 'error'); }
     };
 
     const handleLogout = () => {
@@ -229,7 +253,6 @@ export function Admin({ onLogout }) {
         onLogout();
     };
 
-    // --- 4. ANALYTICS & HELPERS ---
     const testers = accounts.filter(acc => acc.role === 'tester');
     const getWorkload = (id) => sections.filter(s => s.tester_id === id && s.current_status === 'In Testing').length;
 
@@ -251,6 +274,13 @@ export function Admin({ onLogout }) {
 
     return (
         <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
+            {/* ALERT MODAL INTEGRATION */}
+            <NotificationModal
+                message={notification.message}
+                type={notification.type}
+                onClose={closeAlert}
+            />
+
             {/* SIDEBAR */}
             <aside className="w-72 bg-slate-900 text-white flex flex-col shadow-xl shrink-0">
                 <div className="p-8 text-2xl font-black italic flex items-center gap-3 border-b border-slate-800">
