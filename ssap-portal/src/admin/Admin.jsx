@@ -32,7 +32,7 @@ const NotificationModal = ({ message, type, onClose }) => {
                         onClick={onClose}
                         className={`mt-6 w-full py-3 rounded-xl font-black text-white transition-all shadow-lg ${isError ? 'bg-rose-500 shadow-rose-100 hover:bg-rose-600' : 'bg-slate-900 shadow-slate-200 hover:bg-slate-800'}`}
                     >
-                        ACKNOWLEDGE
+                        OK!
                     </button>
                 </div>
             </div>

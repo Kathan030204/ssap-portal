@@ -159,7 +159,7 @@ export function Designer({ onLogout }) {
       });
       await Promise.all(uploadPromises);
       await api.put(`/sections/${selectedSectionId}`, { current_status: 'Ready for Store' });
-      alert("Package Re-submitted Successfully!");
+      alert("Package Submitted Successfully!");
       setSelectedSectionId(null);
       fetchDesignTasks();
     } catch {
