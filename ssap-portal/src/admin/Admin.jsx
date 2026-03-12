@@ -618,7 +618,7 @@ export function Admin({ onLogout }) {
                                             {accounts.map(acc => (
                                                 <tr key={acc.id} className="hover:bg-slate-50 transition-colors">
                                                     <td className="px-6 py-4 font-bold text-slate-500">{acc.id}</td>
-                                                    <td className="px-6 py-4 font-black">{acc.username}</td>
+                                                    <td className="px-6 py-4 font-black">{acc.username}<br/><span className="text-slate-400 font-medium">{acc.email}</span></td>
                                                     <td className="px-6 py-4 font-black text-[10px] text-indigo-600 uppercase">{acc.role}</td>
                                                     <td className="px-6 py-4 text-right flex justify-end gap-10">
                                                         <button
