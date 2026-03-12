@@ -467,7 +467,7 @@ export function Admin({ onLogout }) {
                                                 <th className="px-6 py-4">User_ID</th>
                                                 <th className="px-6 py-4">User_Name</th>
                                                 <th className="px-6 py-4">Role</th>
-                                                <th className="px-6 py-4 text-right">Actions</th>
+                                                <th className="px-10 py-4 text-right">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
@@ -476,7 +476,7 @@ export function Admin({ onLogout }) {
                                                     <td className="px-6 py-4 font-bold text-slate-500">{acc.id}</td>
                                                     <td className="px-6 py-4 font-black">{acc.username}</td>
                                                     <td className="px-6 py-4 font-black text-[10px] text-indigo-600 uppercase">{acc.role}</td>
-                                                    <td className="px-6 py-4 text-right flex justify-end gap-3">
+                                                    <td className="px-6 py-4 text-right flex justify-end gap-10">
                                                         <button 
                                                             onClick={() => openEditModal(acc)} 
                                                             className="text-blue-500 hover:text-blue-700 transition-colors"
