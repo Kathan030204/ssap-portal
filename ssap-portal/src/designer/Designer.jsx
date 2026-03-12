@@ -4,16 +4,42 @@ import {
   FaPalette, FaImage, FaDesktop, FaMobileAlt,
   FaAd, FaSpinner, FaCloudUploadAlt, FaDownload,
   FaListUl, FaCheckCircle, FaLayerGroup, FaStore, FaRocket,
-  FaUserCircle, FaSignOutAlt, FaBell, FaTimes, FaExclamationTriangle
+  FaUserCircle, FaSignOutAlt, FaBell, FaTimes, FaExclamationTriangle, FaCheck
 } from 'react-icons/fa';
 
 const api = axios.create({ baseURL: 'http://localhost:8000/api' });
+
+// --- NEW COMPONENT: ALERT MODAL ---
+function AlertModal({ isOpen, type, title, message, onClose }) {
+  if (!isOpen) return null;
+  const isError = type === 'error';
+  return (
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-4xl shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-200">
+        <div className={`w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center text-3xl ${isError ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+          {isError ? <FaExclamationTriangle /> : <FaCheck />}
+        </div>
+        <h3 className="text-2xl font-black text-slate-900 mb-2 italic">{title}</h3>
+        <p className="text-slate-500 font-medium mb-8 leading-relaxed">{message}</p>
+        <button 
+          onClick={onClose}
+          className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-transform active:scale-95 ${isError ? 'bg-rose-600 shadow-rose-200' : 'bg-slate-900 shadow-slate-200'} text-white`}
+        >
+          OK!
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function Designer({ onLogout }) {
   const [loading, setLoading] = useState(false);
   const [sections, setSections] = useState([]);
   const [selectedSectionId, setSelectedSectionId] = useState(null);
   const [viewFilter, setViewFilter] = useState('all');
+  
+  // --- MODAL STATE ---
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, type: 'success', title: '', message: '' });
 
   // --- AUTH STATE ---
   const [currentUser, setCurrentUser] = useState({ id: null, name: 'Designer', role: 'Designer' });
@@ -28,6 +54,10 @@ export function Designer({ onLogout }) {
     mobile: [],
     banner: []
   });
+
+  const showAlert = (type, title, message) => {
+    setModalConfig({ isOpen: true, type, title, message });
+  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -85,7 +115,6 @@ export function Designer({ onLogout }) {
     setShowNotifDropdown(false);
   };
 
-  // ADDED: Simple function to clear selection
   const handleClosePipeline = () => {
     setSelectedSectionId(null);
   };
@@ -109,7 +138,6 @@ export function Designer({ onLogout }) {
     return true;
   });
 
-  // Only show pipeline UI for specific filters and when a section is selected
   const showPipeline = (viewFilter === 'passed' || viewFilter === 'rejected') && selectedSectionId !== null;
 
   const stats = {
@@ -140,7 +168,7 @@ export function Designer({ onLogout }) {
   const handleFinalSubmit = async () => {
     const totalFiles = [...pendingAssets.desktop, ...pendingAssets.mobile, ...pendingAssets.banner].length;
     if (totalFiles === 0) {
-      alert("Please select at least one asset to upload.");
+      showAlert('error', 'Selection Empty', 'Please select at least one asset to upload before finalizing.');
       return;
     }
     setLoading(true);
@@ -159,11 +187,13 @@ export function Designer({ onLogout }) {
       });
       await Promise.all(uploadPromises);
       await api.put(`/sections/${selectedSectionId}`, { current_status: 'Ready for Store' });
-      alert("Package Submitted Successfully!");
+      
+      showAlert('success', 'Sync Complete', 'Package has been submitted and moved to Store Readiness.');
+      
       setSelectedSectionId(null);
       fetchDesignTasks();
     } catch {
-      alert("Error uploading assets.");
+      showAlert('error', 'Upload Failed', 'The server rejected the assets. Check connection or file formats.');
     } finally {
       setLoading(false);
     }
@@ -181,12 +211,21 @@ export function Designer({ onLogout }) {
       link.click();
       link.remove();
     } catch {
-      alert("Download failed.");
+      showAlert('error', 'Download Error', 'Could not retrieve the zip package from the repository.');
     }
   };
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
+      {/* GLOBAL MODAL COMPONENT */}
+      <AlertModal 
+        isOpen={modalConfig.isOpen}
+        type={modalConfig.type}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+      />
+
       <aside className="w-64 bg-slate-900 text-white flex flex-col shrink-0 fixed h-full z-20">
         <div className="p-8 text-xl font-black italic flex items-center gap-3 border-b border-slate-800">
           <FaPalette className="text-indigo-400" /> Designer Hub
@@ -302,11 +341,9 @@ export function Designer({ onLogout }) {
                         <FaCloudUploadAlt className={selectedSection?.current_status === 'Rejected by Admin' ? "text-rose-600" : "text-indigo-600"} /> 
                         {selectedSection?.current_status === 'Rejected by Admin' ? 'Corrective Upload' : 'Asset Pipeline'}
                     </h3>
-                    {/* CLOSE BUTTON */}
                     <button 
                         onClick={handleClosePipeline}
                         className="p-2 bg-slate-100 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors"
-                        title="Close Pipeline"
                     >
                         <FaTimes size={16} />
                     </button>
@@ -332,7 +369,7 @@ export function Designer({ onLogout }) {
                         { id: 'banner', icon: <FaAd />, label: 'Banner' }
                       ].map(asset => (
                         <div key={asset.id}>
-                          <label className="group flex flex-col p-4 rounded-2xl border-2 border-dashed border-slate-200 hover:border-indigo-400 cursor-pointer">
+                          <label className="group flex flex-col p-4 rounded-2xl border-2 border-dashed border-slate-200 hover:border-indigo-400 cursor-pointer transition-colors">
                             <span className="text-[11px] font-black uppercase text-slate-600 flex items-center gap-2">
                               {asset.icon} {asset.label}
                             </span>
@@ -348,8 +385,8 @@ export function Designer({ onLogout }) {
                           </div>
                         </div>
                       ))}
-                      <button onClick={handleFinalSubmit} disabled={loading} className="w-full py-4 rounded-2xl font-black shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white uppercase text-xs">
-                        {loading ? <FaSpinner className="animate-spin mx-auto" /> : 'Finalize & Submit'}
+                      <button onClick={handleFinalSubmit} disabled={loading} className="w-full py-4 rounded-2xl font-black shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white uppercase text-xs transition-all active:scale-95 disabled:bg-slate-200">
+                        {loading ? <FaSpinner className="animate-spin mx-auto text-lg" /> : 'Finalize & Submit'}
                       </button>
                     </div>
                   )}
@@ -367,8 +404,8 @@ function StatCard({ label, val, icon, color }) {
   return (
     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
       <p className={`text-[10px] font-black uppercase tracking-wider ${color}`}>{label}</p>
-      <div className="flex justify-between items-end mt-1 font-black text-3xl">
-        {val} <span className="text-slate-100 text-2xl">{icon}</span>
+      <div className="flex justify-between items-end mt-1 font-black text-3xl text-slate-900">
+        {val} <span className="text-2xl opacity-40">{icon}</span>
       </div>
     </div>
   );
