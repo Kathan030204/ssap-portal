@@ -20,9 +20,12 @@ class SectionController extends Controller
             'title'      => 'required|string|max:255',
             'creator_id' => 'required',
             'zip_file'   => 'required|file|extensions:zip,jpg,jpeg,png,liquid', 
+            'live_link' => 'required|url',
+            'shopify_admin_link' => 'required|url',
         ], [
             'zip_file.extensions' => 'The file must be a zip, rar, image, or a .liquid file.'
-        ]);
+        ],
+        );
 
         $path = null;
         if ($request->hasFile('zip_file')) {

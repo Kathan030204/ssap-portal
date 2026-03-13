@@ -17,7 +17,7 @@ export function Creator({ onLogout }) {
   const [submitting, setSubmitting] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [isEditing, setIsEditing] = useState(null);
-  const [formData, setFormData] = useState({ title: '', category: 'Hero', docs: '' });
+  const [formData, setFormData] = useState({ title: '', category: 'Hero', docs: '', live_link: '', shopify_admin_link: '' });
   const [file, setFile] = useState(null);
   const [statusFilter, setStatusFilter] = useState('All');
   const [user, setUser] = useState({ id: null, name: '', role: '', loggedIn: false });
@@ -92,7 +92,7 @@ export function Creator({ onLogout }) {
   const startReupload = (sec) => {
     setIsEditing(sec.id);
     setSelectedIssue(null);
-    setFormData({ title: sec.title, category: sec.category || 'Hero', docs: sec.docs || '' });
+    setFormData({ title: sec.title, live_link: sec.live_link || '', shopify_admin_link: sec.shopify_admin_link || '', category: sec.category || 'Hero', docs: sec.docs || '' });
     setActiveTab('submit');
   };
 
@@ -103,10 +103,10 @@ export function Creator({ onLogout }) {
     data.append('title', formData.title);
     data.append('category', formData.category);
     data.append('docs', formData.docs);
-    
-    // LOGIC CHANGE: New submissions go to Admin for allocation first
-    data.append('current_status', 'Pending Allocation'); 
-    
+    data.append('live_link', formData.live_link);       // Append Live Link
+    data.append('shopify_admin_link', formData.shopify_admin_link); // Append Shopify Admin Link
+
+    data.append('current_status', 'Pending Allocation');
     data.append('creator_id', user.id);
     if (file) data.append('zip_file', file);
 
@@ -117,7 +117,7 @@ export function Creator({ onLogout }) {
       } else {
         await api.post('/sections', data);
       }
-      setFormData({ title: '', category: 'Hero', docs: '' });
+      setFormData({ title: '', category: 'Hero', docs: '', live_link: '', shopify_admin_link: '' });
       setFile(null);
       setIsEditing(null);
       setSelectedIssue(null);
@@ -144,7 +144,7 @@ export function Creator({ onLogout }) {
     if (statusFilter === 'All') return true;
     // Show both Pending and Active testing in the Review tab
     if (statusFilter === 'In Review') {
-        return sec.current_status === 'Pending Allocation' || sec.current_status === 'In Testing';
+      return sec.current_status === 'Pending Allocation' || sec.current_status === 'In Testing';
     }
     if (statusFilter === 'Fix Required') return sec.current_status === 'Issue Logged';
     if (statusFilter === 'Published') return sec.current_status === 'Published';
@@ -161,8 +161,8 @@ export function Creator({ onLogout }) {
         </div>
 
         <nav className="flex-1 p-4 space-y-2 mt-4">
-          <button 
-            onClick={() => { setActiveTab('inventory'); setStatusFilter('All'); setSelectedIssue(null); }} 
+          <button
+            onClick={() => { setActiveTab('inventory'); setStatusFilter('All'); setSelectedIssue(null); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'inventory' && statusFilter === 'All' ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-500'}`}
           >
             <FaHome size={18} /> Dashboard
@@ -170,17 +170,17 @@ export function Creator({ onLogout }) {
 
           <div className="pt-4 pb-2 px-4 text-[10px] font-black uppercase text-slate-600 tracking-widest">Pipeline</div>
           {['In Review', 'Fix Required', 'Published'].map((f) => (
-            <button 
-              key={f} 
-              onClick={() => { setActiveTab('inventory'); setStatusFilter(f); setSelectedIssue(null); }} 
+            <button
+              key={f}
+              onClick={() => { setActiveTab('inventory'); setStatusFilter(f); setSelectedIssue(null); }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${statusFilter === f && activeTab === 'inventory' ? 'bg-slate-800 text-indigo-400' : 'hover:bg-slate-800 text-slate-500'}`}
             >
               {f === 'In Review' ? <FaFlask /> : f === 'Fix Required' ? <FaBug /> : <FaCheckCircle />} {f}
             </button>
           ))}
 
-          <button 
-            onClick={() => { setActiveTab('submit'); setIsEditing(null); setSelectedIssue(null); }} 
+          <button
+            onClick={() => { setActiveTab('submit'); setIsEditing(null); setSelectedIssue(null); }}
             className="mt-4 w-full flex items-center gap-3 px-4 py-3 rounded-xl font-black text-xs uppercase bg-white text-slate-900 hover:bg-indigo-50 transition-all"
           >
             <FaPlus /> New Asset
@@ -251,11 +251,11 @@ export function Creator({ onLogout }) {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {filteredSections.map(sec => (
-                      <tr 
-                        key={sec.id} 
+                      <tr
+                        key={sec.id}
                         onClick={() => {
                           if (statusFilter === 'Fix Required') setSelectedIssue(sec);
-                        }} 
+                        }}
                         className={`group hover:bg-slate-50 transition ${statusFilter === 'Fix Required' ? 'cursor-pointer' : 'cursor-default'} ${selectedIssue?.id === sec.id ? 'bg-indigo-50/50' : ''}`}
                       >
                         <td className="px-6 py-5">
@@ -263,12 +263,11 @@ export function Creator({ onLogout }) {
                           <p className="text-[9px] font-bold text-slate-400 uppercase">#{sec.id}</p>
                         </td>
                         <td className="px-6 py-5 text-center">
-                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border flex items-center justify-center gap-1 w-max mx-auto ${
-                            sec.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' : 
+                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border flex items-center justify-center gap-1 w-max mx-auto ${sec.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' :
                             sec.current_status === 'Pending Allocation' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                            sec.current_status === 'In Testing' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                            'bg-slate-100 text-slate-500'
-                          }`}>
+                              sec.current_status === 'In Testing' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                'bg-slate-100 text-slate-500'
+                            }`}>
                             {sec.current_status === 'Pending Allocation'}
                             {sec.current_status === 'In Testing'}
                             {sec.current_status}
@@ -276,8 +275,8 @@ export function Creator({ onLogout }) {
                         </td>
                         <td className="px-6 py-5 text-right flex justify-end gap-2">
                           {sec.current_status === 'Issue Logged' && (
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); startReupload(sec); }} 
+                            <button
+                              onClick={(e) => { e.stopPropagation(); startReupload(sec); }}
                               className="p-2 bg-slate-700 text-white rounded-lg shadow-lg text-[10px] font-bold uppercase"
                             >
                               Fix Issues
@@ -300,9 +299,9 @@ export function Creator({ onLogout }) {
                     <div className="space-y-6">
                       <div className="flex justify-between items-start">
                         <h3 className="font-black text-slate-900 italic uppercase">Issue Logged Viewer</h3>
-                        <button 
+                        <button
                           type="button"
-                          onClick={() => setSelectedIssue(null)} 
+                          onClick={() => setSelectedIssue(null)}
                           className="text-slate-300 hover:text-slate-900 p-1 transition-colors"
                         >
                           <FaTimes size={18} />
@@ -354,7 +353,40 @@ export function Creator({ onLogout }) {
               <div className="p-10 space-y-8">
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-1">Asset Label</label>
-                  <input required value={formData.title} disabled={isEditing} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full border-2 border-slate-50 bg-slate-50 rounded-2xl p-5 text-sm font-bold outline-none focus:border-indigo-500" placeholder="e.g. Hero Section V2" />
+                  <input
+                    required
+                    value={formData.title}
+                    disabled={isEditing}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className="w-full border-2 border-slate-50 bg-slate-50 rounded-2xl p-5 text-sm font-bold outline-none focus:border-indigo-500"
+                    placeholder="e.g. Hero Section V2"
+                  />
+                </div>
+
+                {/* NEW LINK FIELDS GRID */}
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-1">Live Page Link</label>
+                    <input
+                      type="url"
+                      value={formData.live_link}
+                      disabled={isEditing}
+                      onChange={(e) => setFormData({ ...formData, live_link: e.target.value })}
+                      className="w-full border-2 border-slate-50 bg-slate-50 rounded-2xl p-5 text-sm font-bold outline-none focus:border-indigo-500"
+                      placeholder="https://example.com/live"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-1">Shopify Admin Link</label>
+                    <input
+                      type="url"
+                      value={formData.shopify_admin_link}
+                      disabled={isEditing}
+                      onChange={(e) => setFormData({ ...formData, shopify_link: e.target.value })}
+                      className="w-full border-2 border-slate-50 bg-slate-50 rounded-2xl p-5 text-sm font-bold outline-none focus:border-indigo-500"
+                      placeholder="https://admin.shopify.com/..."
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-1">Package (.zip)</label>
