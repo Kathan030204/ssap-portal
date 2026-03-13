@@ -246,16 +246,15 @@ export function Creator({ onLogout }) {
                     <tr>
                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Asset Details</th>
                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-center">Lifecycle</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-right">Utility</th>
+                      <th className="pr-30 py-4 text-[10px] font-black text-slate-400 uppercase text-right">Utility</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-right">View</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {filteredSections.map(sec => (
                       <tr
                         key={sec.id}
-                        onClick={() => {
-                          if (statusFilter === 'Fix Required') setSelectedIssue(sec);
-                        }}
+
                         className={`group hover:bg-slate-50 transition ${statusFilter === 'Fix Required' ? 'cursor-pointer' : 'cursor-default'} ${selectedIssue?.id === sec.id ? 'bg-indigo-50/50' : ''}`}
                       >
                         <td className="px-6 py-5">
@@ -273,17 +272,17 @@ export function Creator({ onLogout }) {
                             {sec.current_status}
                           </span>
                         </td>
-                        <td className="px-6 py-5 text-right flex justify-end gap-2">
+                        <td className="px-6 py-5 text-right flex justify-end gap-2 mr-20">
                           {sec.current_status === 'Issue Logged' && (
                             <button
                               onClick={(e) => { e.stopPropagation(); startReupload(sec); }}
-                              className="p-2 bg-slate-700 text-white rounded-lg shadow-lg text-[10px] font-bold uppercase"
+                              className="p-2 bg-slate-700 text-white rounded-lg shadow-lg text-[10px] font-bold uppercase cursor-pointer"
                             >
                               Fix Issues
                             </button>
                           )}
-                          <button className="p-2 text-slate-400 hover:text-indigo-600"><FaEye /></button>
                         </td>
+                        <td className="px-6 py-5 text-right"><button onClick={() => {if (statusFilter === 'Fix Required') setSelectedIssue(sec);}} className="p-2 text-slate-400 hover:text-indigo-600 cursor-pointer"><FaEye /></button></td>
                       </tr>
                     ))}
                   </tbody>

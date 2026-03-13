@@ -295,8 +295,9 @@ export function Tester({ onLogout }) {
               <table className="w-full text-left">
                 <thead className="bg-slate-50/50 border-b border-slate-100">
                   <tr>
-                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Asset Name</th>
-                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Status</th>
+                    <th className="px-8 py-5 text-base font-black uppercase tracking-widest text-slate-600">Asset Name</th>
+                    <th className="px-6 py-5 text-base text-left font-black uppercase tracking-widest text-slate-600">Status</th>
+                    <th className="px-8 py-5 text-base font-black uppercase tracking-widest text-slate-600 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -309,13 +310,11 @@ export function Tester({ onLogout }) {
                             <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-purple-600 group-hover:bg-purple-100 transition-colors"><FaLayerGroup /></div>
                             <div>
                               <p className="font-black text-slate-800">{item.title}</p>
-                              {item.issue_count > 0 && <span className="text-[9px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 mt-1 inline-block">RE-LOGGED: {item.issue_count}x</span>}
                             </div>
                           </div>
                         </td>
-                        <td className="px-8 py-6 text-right">
-                          <button onClick={(e) => { e.stopPropagation(); handleDownload(item.id, item.title); }} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl mr-2 transition-colors"><FaDownload /></button>
-                          <span className={`px-4 py-1.5 rounded-full text-[9px] font-black border uppercase 
+                        <td className="py-6 text-left">
+                          <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border uppercase 
                             ${item.current_status === 'Published' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                               item.current_status === 'Pending Admin' ? 'bg-amber-50 text-amber-600 border-amber-100' :
                                 item.current_status === 'QA Passed' ? 'bg-cyan-50 text-cyan-600 border-cyan-100' :
@@ -323,6 +322,9 @@ export function Tester({ onLogout }) {
                                     'bg-blue-50 text-blue-600 border-blue-100'}`}>
                             {item.current_status}
                           </span>
+                        </td>
+                        <td className="px-8 py-6 text-right">
+                          <button onClick={(e) => { e.stopPropagation(); handleDownload(item.id, item.title); }} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl mr-2 transition-colors cursor-pointer"><FaDownload /></button>
                         </td>
                       </tr>
                     );
