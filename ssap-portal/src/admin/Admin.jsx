@@ -421,8 +421,8 @@ export function Admin({ onLogout }) {
                                                                 onClick={() => handleAssignTester(sec.id, selectedTesters[sec.id])}
                                                                 disabled={!selectedTesters[sec.id]} // Prevent clicking if no tester chosen
                                                                 className={`px-4 py-2 font-extrabold rounded-xl transition-all ${selectedTesters[sec.id]
-                                                                        ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg cursor-pointer"
-                                                                        : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                                                                    ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg cursor-pointer"
+                                                                    : "bg-slate-200 text-slate-400 cursor-not-allowed"
                                                                     }`}
                                                             >
                                                                 Assign to Tester
@@ -451,9 +451,9 @@ export function Admin({ onLogout }) {
                                                         </div>
                                                         <select
                                                             onChange={(e) => setSelectedDesigners({
-                                                                    ...selectedDesigners,
-                                                                    [sec.id]: e.target.value
-                                                                })}
+                                                                ...selectedDesigners,
+                                                                [sec.id]: e.target.value
+                                                            })}
                                                             className="bg-white border p-2 rounded-lg text-sm font-bold shadow-sm outline-none cursor-pointer hover:border-indigo-400 transition-colors"
                                                             defaultValue=""
                                                         >
@@ -465,15 +465,15 @@ export function Admin({ onLogout }) {
                                                             ))}
                                                         </select>
                                                         <button
-                                                                onClick={() => handleAssignDesigner(sec.id, selectedDesigners[sec.id])}
-                                                                disabled={!selectedDesigners[sec.id]} // Prevent clicking if no designer chosen
-                                                                className={`px-4 py-2 font-extrabold rounded-xl transition-all ${selectedDesigners[sec.id]
-                                                                        ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg cursor-pointer"
-                                                                        : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                                                                    }`}
-                                                            >
-                                                                Assign to Designer
-                                                            </button>
+                                                            onClick={() => handleAssignDesigner(sec.id, selectedDesigners[sec.id])}
+                                                            disabled={!selectedDesigners[sec.id]} // Prevent clicking if no designer chosen
+                                                            className={`px-4 py-2 font-extrabold rounded-xl transition-all ${selectedDesigners[sec.id]
+                                                                ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg cursor-pointer"
+                                                                : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                                                                }`}
+                                                        >
+                                                            Assign to Designer
+                                                        </button>
                                                     </div>
                                                 ))
                                             ) : (
@@ -531,12 +531,14 @@ export function Admin({ onLogout }) {
                                                         </td>
                                                         <td className="px-6 py-4 text-right flex justify-end gap-2">
                                                             {sec.current_status === 'Ready for Store' && (
-                                                                <button
-                                                                    onClick={() => handleRejectAssets(sec.id)}
-                                                                    className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-rose-100 transition-all border border-rose-100"
-                                                                >
-                                                                    <FaTimes /> REJECT ASSETS
-                                                                </button>
+                                                                <>
+                                                                    <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="flex items-center gap-2 bg-emerald-600 text-white tracking-wider px-3 py-2 rounded-xl font-black text-xs hover:bg-rose-100 transition-all">
+                                                                        <FaRocket /> Publish to Store
+                                                                    </button>
+                                                                    <button onClick={() => handleRejectAssets(sec.id)} className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-rose-100 transition-all border border-rose-100">
+                                                                        <FaTimes /> REJECT ASSETS
+                                                                    </button>
+                                                                </>
                                                             )}
                                                             <button onClick={() => openAssetsViewer(sec)} className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-indigo-100 transition-all">
                                                                 <FaEye /> VIEW ASSETS
