@@ -21,7 +21,7 @@ export function Tester({ onLogout }) {
   const [searchTerm, setSearchTerm] = useState("");
 
   // --- ISSUE REPORT & HISTORY STATES ---
-  const [issueData, setIssueData] = useState({ type: 'Bug', severity: 'Major', desc: '', isCustomType: false });
+  const [issueData, setIssueData] = useState({ severity: 'Major', desc: '', isCustomType: false });
   const [reportIssues, setReportIssues] = useState([]);
   const [customTypeText, setCustomTypeText] = useState("");
   const [issueHistory, setIssueHistory] = useState([]);
@@ -96,7 +96,7 @@ export function Tester({ onLogout }) {
     setReportIssues([]);
     setIssueHistory([]);
     setEditingIssueId(null);
-    setIssueData({ type: 'Bug', severity: 'Major', desc: '', isCustomType: false });
+    setIssueData({ severity: 'Major', desc: '', isCustomType: false });
     setNotifications(prev => prev.filter(n => n.id !== section.id));
 
     if (section.current_status === 'Issue Logged') {
@@ -139,7 +139,7 @@ export function Tester({ onLogout }) {
       setReportIssues([...reportIssues, { ...issueData, type: finalType, id: Date.now() }]);
     }
 
-    setIssueData({ type: 'Bug', severity: 'Major', desc: '', isCustomType: false });
+    setIssueData({ severity: 'Major', desc: '', isCustomType: false });
     setCustomTypeText("");
   };
 
@@ -158,7 +158,7 @@ export function Tester({ onLogout }) {
   const removeIssueFromReport = (id) => {
     if (editingIssueId === id) {
       setEditingIssueId(null);
-      setIssueData({ type: 'Bug', severity: 'Major', desc: '', isCustomType: false });
+      setIssueData({ severity: 'Major', desc: '', isCustomType: false });
     }
     setReportIssues(reportIssues.filter(issue => issue.id !== id));
   };
@@ -365,23 +365,6 @@ export function Tester({ onLogout }) {
                     {!editingIssueId && <button onClick={() => handleUpdateStatus(selectedSection.id, 'QA Passed')} className="w-full py-6 bg-emerald-500 text-white rounded-4xl font-black uppercase italic tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200">Send to Admin for Approval</button>}
 
                     <div className={`p-8 rounded-[2.5rem] border transition-all space-y-4 ${editingIssueId ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-100'}`}>
-                      <div className="flex flex-wrap gap-2">
-                        {issueTypes.map(t => (
-                          <button
-                            key={t}
-                            onClick={() => setIssueData({ ...issueData, type: t, isCustomType: false })}
-                            className={`flex-1 min-w-18 py-3 rounded-xl text-[10px] font-black uppercase border transition-all ${!issueData.isCustomType && issueData.type === t ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-400'}`}
-                          >
-                            {t}
-                          </button>
-                        ))}
-                        <button onClick={() => setIssueData({ ...issueData, isCustomType: true })} className={`flex-1 py-3 rounded-xl text-[10px] font-black border transition-all ${issueData.isCustomType ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-200 text-slate-400'}`}>+ Other</button>
-                      </div>
-
-                      {issueData.isCustomType && (
-                        <input className="w-full p-4 border border-purple-100 rounded-xl text-xs font-black outline-none focus:ring-2 ring-purple-500/10" placeholder="Specify issue type..." value={customTypeText} onChange={(e) => setCustomTypeText(e.target.value)} />
-                      )}
-
                       <div className="grid grid-cols-3 gap-2">
                         {['Minor', 'Major', 'Critical'].map(sev => (
                           <button key={sev} onClick={() => setIssueData({ ...issueData, severity: sev })} className={`py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${issueData.severity === sev ? 'bg-rose-600 border-rose-600 text-white' : 'bg-white border-slate-100 text-slate-400'}`}>{sev}</button>
@@ -392,7 +375,7 @@ export function Tester({ onLogout }) {
 
                       <div className="flex gap-2">
                         {editingIssueId && (
-                          <button onClick={() => { setEditingIssueId(null); setIssueData({ type: 'Bug', severity: 'Major', desc: '', isCustomType: false }); setCustomTypeText(""); }} className="flex-1 py-4 bg-slate-200 text-slate-600 rounded-2xl font-black text-[10px] uppercase hover:bg-slate-300 transition-all">Cancel</button>
+                          <button onClick={() => { setEditingIssueId(null); setIssueData({ severity: 'Major', desc: '', isCustomType: false }); setCustomTypeText(""); }} className="flex-1 py-4 bg-slate-200 text-slate-600 rounded-2xl font-black text-[10px] uppercase hover:bg-slate-300 transition-all">Cancel</button>
                         )}
                         <button onClick={addIssueToReport} className={`flex-2 py-4 border-2 rounded-2xl font-black text-[10px] uppercase transition-all ${editingIssueId ? 'bg-purple-600 border-purple-600 text-white shadow-lg' : 'border-dashed border-slate-300 text-slate-400 hover:text-purple-600 hover:border-purple-400'}`}>
                           {editingIssueId ? 'Save Changes' : <><FaPlus className="inline mr-2" /> Add Issue to Batch</>}
