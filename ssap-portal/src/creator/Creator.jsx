@@ -6,7 +6,7 @@ import {
   FaFileAlt, FaFlask, FaLayerGroup,
   FaHome, FaBoxOpen,
   FaSignOutAlt, FaBell,
-  FaUserCircle
+  FaUserCircle, FaHourglassHalf
 } from 'react-icons/fa';
 
 const api = axios.create({ baseURL: '/api' });
@@ -26,7 +26,6 @@ export function Creator({ onLogout }) {
   const notifRef = useRef(null);
 
   // --- API FETCHING ---
-  // Optimized to handle the "selectedIssue" state correctly during background polling
   const fetchSections = useCallback(async (userId) => {
     if (!userId) return;
     try {
@@ -34,7 +33,7 @@ export function Creator({ onLogout }) {
       const mySections = response.data.filter(s => s.creator_id === userId);
       setSections(mySections);
 
-      // Handle Notifications
+      // Handle Notifications for Issues
       const issueAlerts = mySections
         .filter(s => s.current_status === 'Issue Logged')
         .map(s => ({
@@ -45,19 +44,16 @@ export function Creator({ onLogout }) {
         }));
       setNotifications(issueAlerts);
 
-      // LIVE UPDATE LOGIC:
-      // Use functional state update to see if the panel is CURRENTLY open.
-      // This prevents the interval from re-opening a panel the user just closed.
+      // Live Update for Sidebar/Panel
       setSelectedIssue(current => {
-        if (!current) return null; // If user closed it, keep it closed.
+        if (!current) return null;
         const updatedData = mySections.find(s => s.id === current.id);
-        // Only keep it open if it still exists and still requires a fix
         return (updatedData && updatedData.current_status === 'Issue Logged') ? updatedData : null;
       });
     } catch (error) {
       console.error("Fetch Error:", error);
     }
-  }, []); // Empty deps because we use functional state updates inside
+  }, []);
 
   useEffect(() => {
     const savedUser = JSON.parse(sessionStorage.getItem('user'));
@@ -107,7 +103,10 @@ export function Creator({ onLogout }) {
     data.append('title', formData.title);
     data.append('category', formData.category);
     data.append('docs', formData.docs);
-    data.append('current_status', 'In Testing');
+    
+    // LOGIC CHANGE: New submissions go to Admin for allocation first
+    data.append('current_status', 'Pending Allocation'); 
+    
     data.append('creator_id', user.id);
     if (file) data.append('zip_file', file);
 
@@ -131,16 +130,22 @@ export function Creator({ onLogout }) {
     }
   };
 
+  // --- STATS CALCULATION ---
   const stats = {
     total: sections.length,
-    testing: sections.filter(s => s.current_status === 'In Testing').length,
+    // Combined Review: things waiting for admin + things actively with testers
+    review: sections.filter(s => s.current_status === 'Pending Allocation' || s.current_status === 'In Testing').length,
     issues: sections.filter(s => s.current_status === 'Issue Logged').length,
     passed: sections.filter(s => s.current_status === 'Published').length,
   };
 
+  // --- FILTERING LOGIC ---
   const filteredSections = sections.filter(sec => {
     if (statusFilter === 'All') return true;
-    if (statusFilter === 'In Review') return sec.current_status === 'In Testing';
+    // Show both Pending and Active testing in the Review tab
+    if (statusFilter === 'In Review') {
+        return sec.current_status === 'Pending Allocation' || sec.current_status === 'In Testing';
+    }
     if (statusFilter === 'Fix Required') return sec.current_status === 'Issue Logged';
     if (statusFilter === 'Published') return sec.current_status === 'Published';
     return true;
@@ -230,7 +235,7 @@ export function Creator({ onLogout }) {
             <div className={statusFilter === 'Fix Required' ? 'col-span-8' : 'col-span-1'}>
               <div className="grid grid-cols-4 gap-4 mb-8">
                 <StatBox label="TOTAL" val={stats.total} />
-                <StatBox label="REVIEW" val={stats.testing} color="text-amber-500" />
+                <StatBox label="IN REVIEW" val={stats.review} color="text-amber-500" />
                 <StatBox label="ISSUES" val={stats.issues} color="text-rose-500" />
                 <StatBox label="PASSED" val={stats.passed} color="text-emerald-500" />
               </div>
@@ -258,7 +263,14 @@ export function Creator({ onLogout }) {
                           <p className="text-[9px] font-bold text-slate-400 uppercase">#{sec.id}</p>
                         </td>
                         <td className="px-6 py-5 text-center">
-                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${sec.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-100 text-slate-500'}`}>
+                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border flex items-center justify-center gap-1 w-max mx-auto ${
+                            sec.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' : 
+                            sec.current_status === 'Pending Allocation' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                            sec.current_status === 'In Testing' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                            'bg-slate-100 text-slate-500'
+                          }`}>
+                            {sec.current_status === 'Pending Allocation'}
+                            {sec.current_status === 'In Testing'}
                             {sec.current_status}
                           </span>
                         </td>
@@ -288,7 +300,6 @@ export function Creator({ onLogout }) {
                     <div className="space-y-6">
                       <div className="flex justify-between items-start">
                         <h3 className="font-black text-slate-900 italic uppercase">Issue Logged Viewer</h3>
-                        {/* THE BUTTON THAT WAS BROKEN */}
                         <button 
                           type="button"
                           onClick={() => setSelectedIssue(null)} 
@@ -338,6 +349,7 @@ export function Creator({ onLogout }) {
                 <h2 className="text-3xl font-black italic uppercase tracking-tighter">
                   {isEditing ? 'Revise Section' : 'Add New Section'}
                 </h2>
+                <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Initial status: Pending Admin Allocation</p>
               </div>
               <div className="p-10 space-y-8">
                 <div>
@@ -350,7 +362,7 @@ export function Creator({ onLogout }) {
                     <FaUpload className="mx-auto text-indigo-200 mb-4" size={32} />
                     <p className="text-sm font-black italic mb-6">{file ? file.name : 'Drag & Drop code package'}</p>
                     <label className="bg-indigo-600 text-white px-8 py-3 rounded-xl text-xs font-black cursor-pointer shadow-lg hover:bg-indigo-700">
-                      BROWSE <input type="file" className="hidden" accept=".zip" onChange={(e) => setFile(e.target.files[0])} />
+                      BROWSE <input type="file" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
                     </label>
                   </div>
                 </div>

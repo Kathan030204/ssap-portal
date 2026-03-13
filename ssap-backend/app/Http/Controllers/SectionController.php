@@ -19,7 +19,7 @@ class SectionController extends Controller
         $request->validate([
             'title'      => 'required|string|max:255',
             'creator_id' => 'required',
-            'zip_file'   => 'required|file|extensions:zip,rar,jpg,jpeg,png,liquid', 
+            'zip_file'   => 'required|file|extensions:zip,jpg,jpeg,png,liquid', 
         ], [
             'zip_file.extensions' => 'The file must be a zip, rar, image, or a .liquid file.'
         ]);
@@ -68,7 +68,7 @@ class SectionController extends Controller
         // --- 1. HANDLE ADMIN TASK ASSIGNMENT ---
         if ($request->has('tester_id')) {
             $section->tester_id = $request->tester_id;
-            $section->current_status = $request->current_status ?? 'In Testing';
+            $section->current_status = $request->current_status ?? 'Pending Allocation';
         }
         // --- 1. HANDLE ADMIN TASK ASSIGNMENT ---
         if ($request->has('designer_id')) {

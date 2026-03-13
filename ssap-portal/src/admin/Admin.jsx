@@ -86,28 +86,23 @@ export function Admin({ onLogout }) {
     const [sections, setSections] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // NOTIFICATION STATE
     const [notification, setNotification] = useState({ message: '', type: 'success' });
     const showAlert = (message, type = 'success') => setNotification({ message, type });
     const closeAlert = () => setNotification({ message: '', type: 'success' });
 
-    // CONFIRMATION STATE
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => { } });
     const closeConfirm = () => setConfirmModal({ ...confirmModal, isOpen: false });
 
-    // MODAL & FORM STATES
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [editingUserId, setEditingUserId] = useState(null);
     const [formData, setFormData] = useState({ username: '', email: '', password: '', role: 'creator' });
 
-    // FILTERS
     const [approvalSearch, setApprovalSearch] = useState('');
     const [approvalFilter, setApprovalFilter] = useState('all');
     const [repoSearch, setRepoSearch] = useState('');
     const [repoFilter, setRepoFilter] = useState('all');
 
-    // ASSETS VIEWER STATES
     const [isAssetsModalOpen, setIsAssetsModalOpen] = useState(false);
     const [selectedSection, setSelectedSection] = useState(null);
     const [sectionDesigns, setSectionDesigns] = useState([]);
@@ -234,29 +229,31 @@ export function Admin({ onLogout }) {
         });
     };
 
+    // --- UPDATED LOGIC: CHANGE STATUS TO 'IN TESTING' UPON ASSIGNMENT ---
+    // This stores { sectionId: testerId } pairs
+    const [selectedTesters, setSelectedTesters] = React.useState({});
     const handleAssignTester = async (sectionId, testerId) => {
         if (!testerId) return;
         try {
             await api.put(`/sections/${sectionId}`, {
                 tester_id: testerId,
-                current_status: 'In Testing'
+                current_status: 'In Testing' // Logic updated from 'Pending Allocation' to 'In Testing'
             });
-            showAlert("Tester assigned successfully.");
+            showAlert("Tester assigned. Asset is now In Testing.");
             fetchInitialData();
         } catch { showAlert("Assignment failed.", 'error'); }
     };
 
-    // Logic for Designer Allocation
+    const [selectedDesigners, setSelectedDesigners] = React.useState({});
     const handleAssignDesigner = async (sectionId, designerId) => {
         if (!designerId) return;
         try {
-            // We update the designer_id and move the status to 'In Design'
             await api.put(`/sections/${sectionId}`, {
                 designer_id: designerId,
                 current_status: 'In Design'
             });
             showAlert("Task successfully allocated to Designer!");
-            fetchInitialData(); // Refresh the lists
+            fetchInitialData();
         } catch {
             showAlert("Allocation failed. Please try again.", "error");
         }
@@ -314,14 +311,8 @@ export function Admin({ onLogout }) {
     const testers = accounts.filter(acc => acc.role === 'tester');
     const getWorkload = (id) => sections.filter(s => s.tester_id === id && s.current_status === 'In Testing').length;
 
-    // Filter for designers
     const designers = accounts.filter(acc => acc.role === 'designer');
-
-    // Calculate workload for designers 
-    // (Counts sections assigned to them that are currently in the design phase)
-    const getDesignerWorkload = (id) => sections.filter(s =>
-        s.designer_id === id && s.current_status === 'In Design'
-    ).length;
+    const getDesignerWorkload = (id) => sections.filter(s => s.designer_id === id && s.current_status === 'In Design').length;
 
     const calculateAvgTime = () => {
         const published = sections.filter(s => s.current_status === 'Published' && s.updated_at);
@@ -341,24 +332,9 @@ export function Admin({ onLogout }) {
 
     return (
         <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
-            {/* NOTIFICATION MODAL */}
-            <NotificationModal
-                message={notification.message}
-                type={notification.type}
-                onClose={closeAlert}
-            />
+            <NotificationModal message={notification.message} type={notification.type} onClose={closeAlert} />
+            <ConfirmationModal isOpen={confirmModal.isOpen} title={confirmModal.title} message={confirmModal.message} confirmText={confirmModal.confirmText} onConfirm={confirmModal.onConfirm} onCancel={closeConfirm} />
 
-            {/* CONFIRMATION MODAL */}
-            <ConfirmationModal
-                isOpen={confirmModal.isOpen}
-                title={confirmModal.title}
-                message={confirmModal.message}
-                confirmText={confirmModal.confirmText}
-                onConfirm={confirmModal.onConfirm}
-                onCancel={closeConfirm}
-            />
-
-            {/* SIDEBAR */}
             <aside className="w-72 bg-slate-900 text-white flex flex-col shadow-xl shrink-0">
                 <div className="p-8 text-2xl font-black italic flex items-center gap-3 border-b border-slate-800">
                     <FaUserShield className="text-blue-400 h-8 w-8" />
@@ -393,7 +369,6 @@ export function Admin({ onLogout }) {
                 </div>
             </aside>
 
-            {/* MAIN CONTENT */}
             <main className="flex-1 overflow-y-auto p-10">
                 {loading ? (
                     <div className="h-full flex flex-col items-center justify-center text-center">
@@ -411,29 +386,48 @@ export function Admin({ onLogout }) {
                                     <StatusTile label="Live Sections" val={publishedCount} icon={<FaCheckDouble className="text-emerald-500" />} />
                                     <StatusTile label="Total Users" val={totalUsers} icon={<FaUsers className="text-indigo-600" />} />
                                 </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                                {/* TESTER ALLOCATION QUEUE */}
+                                <div className="grid grid-cols-1 gap-8">
                                     <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                                         <h3 className="font-black text-xl mb-6 flex items-center gap-2">
                                             <FaHourglassHalf className="text-amber-500" /> Unassigned Queue
                                         </h3>
                                         <div className="space-y-4">
-                                            {sections.filter(s => s.current_status === 'In Testing' && !s.tester_id).length > 0 ? (
-                                                sections.filter(s => s.current_status === 'In Testing' && !s.tester_id).map(sec => (
+                                            {sections.filter(s => s.current_status === 'Pending Allocation' && !s.tester_id).length > 0 ? (
+                                                sections.filter(s => s.current_status === 'Pending Allocation' && !s.tester_id).map(sec => (
                                                     <div key={sec.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                                         <div className="flex flex-col">
                                                             <span className="font-bold">{sec.title}</span>
                                                             <span className="text-[10px] text-amber-600 font-black uppercase tracking-tight">Awaiting Assignment</span>
                                                         </div>
-                                                        <select
-                                                            onChange={(e) => handleAssignTester(sec.id, e.target.value)}
-                                                            className="bg-white border p-2 rounded-lg text-sm font-bold shadow-sm outline-none"
-                                                            defaultValue=""
-                                                        >
-                                                            <option value="" disabled>Assign Tester...</option>
-                                                            {testers.map(t => (
-                                                                <option key={t.id} value={t.id}>{t.username} (Load: {getWorkload(t.id)})</option>
-                                                            ))}
-                                                        </select>
+
+                                                        <div className="flex items-center gap-4">
+                                                            {/* STEP 1: Update state when dropdown changes */}
+                                                            <select
+                                                                onChange={(e) => setSelectedTesters({
+                                                                    ...selectedTesters,
+                                                                    [sec.id]: e.target.value
+                                                                })}
+                                                                className="bg-white border p-2 rounded-lg text-sm font-bold shadow-sm outline-none"
+                                                                defaultValue=""
+                                                            >
+                                                                <option value="" disabled>Select Tester...</option>
+                                                                {testers.map(t => (
+                                                                    <option key={t.id} value={t.id}>{t.username} (Load: {getWorkload(t.id)})</option>
+                                                                ))}
+                                                            </select>
+                                                            <button
+                                                                onClick={() => handleAssignTester(sec.id, selectedTesters[sec.id])}
+                                                                disabled={!selectedTesters[sec.id]} // Prevent clicking if no tester chosen
+                                                                className={`px-4 py-2 font-extrabold rounded-xl transition-all ${selectedTesters[sec.id]
+                                                                        ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg cursor-pointer"
+                                                                        : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                                                                    }`}
+                                                            >
+                                                                Assign to Tester
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 ))
                                             ) : <p className="text-slate-400 italic text-center py-8">Queue is clear.</p>}
@@ -441,8 +435,8 @@ export function Admin({ onLogout }) {
                                     </div>
                                 </div>
 
-                                {/* --- NEW: DESIGNER ALLOCATION QUEUE --- */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* DESIGNER ALLOCATION QUEUE */}
+                                <div className="grid grid-cols-1 gap-8">
                                     <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                                         <h3 className="font-black text-xl mb-6 flex items-center gap-2">
                                             <FaPalette className="text-indigo-500" /> Designer Allocation
@@ -456,7 +450,10 @@ export function Admin({ onLogout }) {
                                                             <span className="text-[10px] text-indigo-600 font-black uppercase tracking-tight">Passed by Tester</span>
                                                         </div>
                                                         <select
-                                                            onChange={(e) => handleAssignDesigner(sec.id, e.target.value)}
+                                                            onChange={(e) => setSelectedDesigners({
+                                                                    ...selectedDesigners,
+                                                                    [sec.id]: e.target.value
+                                                                })}
                                                             className="bg-white border p-2 rounded-lg text-sm font-bold shadow-sm outline-none cursor-pointer hover:border-indigo-400 transition-colors"
                                                             defaultValue=""
                                                         >
@@ -467,6 +464,16 @@ export function Admin({ onLogout }) {
                                                                 </option>
                                                             ))}
                                                         </select>
+                                                        <button
+                                                                onClick={() => handleAssignDesigner(sec.id, selectedDesigners[sec.id])}
+                                                                disabled={!selectedDesigners[sec.id]} // Prevent clicking if no designer chosen
+                                                                className={`px-4 py-2 font-extrabold rounded-xl transition-all ${selectedDesigners[sec.id]
+                                                                        ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg cursor-pointer"
+                                                                        : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                                                                    }`}
+                                                            >
+                                                                Assign to Designer
+                                                            </button>
                                                     </div>
                                                 ))
                                             ) : (
@@ -618,7 +625,7 @@ export function Admin({ onLogout }) {
                                             {accounts.map(acc => (
                                                 <tr key={acc.id} className="hover:bg-slate-50 transition-colors">
                                                     <td className="px-6 py-4 font-bold text-slate-500">{acc.id}</td>
-                                                    <td className="px-6 py-4 font-black">{acc.username}<br/><span className="text-slate-400 font-medium">{acc.email}</span></td>
+                                                    <td className="px-6 py-4 font-black">{acc.username}<br /><span className="text-slate-400 font-medium">{acc.email}</span></td>
                                                     <td className="px-6 py-4 font-black text-[10px] text-indigo-600 uppercase">{acc.role}</td>
                                                     <td className="px-6 py-4 text-right flex justify-end gap-10">
                                                         <button onClick={() => openEditModal(acc)} className="text-blue-500 hover:text-blue-700 transition-colors" title="Edit User Role">
