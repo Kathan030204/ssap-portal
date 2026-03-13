@@ -23,6 +23,8 @@ Route::apiResource('issues', IssuesController::class);
 
 Route::get('/design', [DesignController::class, 'index']);
 Route::post('/design', [DesignController::class, 'store']);
+Route::put('/design/{id}', [DesignController::class, 'update']);
+Route::delete('/design/{id}', [DesignController::class, 'destroy']);
 
 // routes/api.php
 Route::middleware('auth:sanctum')->group(function () {

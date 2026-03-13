@@ -5,18 +5,27 @@ namespace App\Http\Controllers;
 use App\Models\Design;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Response;
 
 class DesignController extends Controller
 {
     /**
      * Display a listing of the designs.
      */
-    public function index()
+    public function index(Request $request) // Add Request $request here
     {
-        $designs = Design::all();
+        // Check if section_id is provided in the URL query string
+        $sectionId = $request->query('section_id');
+    
+        if ($sectionId) {
+            // Filter designs by the specific section_id
+            $designs = Design::where('section_id', $sectionId)->get();
+        } else {
+            // Fallback: Return all or an empty array depending on your preference
+            $designs = Design::all(); 
+        }
         return response()->json($designs, 200);
     }
-
     /**
      * Store a newly created design in storage.
      */
