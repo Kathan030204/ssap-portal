@@ -8,7 +8,7 @@ import {
 } from 'react-icons/fa';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: '/api',
 });
 
 export function Tester({ onLogout }) {
@@ -72,8 +72,6 @@ export function Tester({ onLogout }) {
 
   useEffect(() => {
     fetchInitialData();
-    const interval = setInterval(fetchInitialData, 3000);
-    return () => clearInterval(interval);
   }, [fetchInitialData]);
 
   const openReview = async (section) => {

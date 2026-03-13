@@ -7,7 +7,7 @@ import {
   FaUserCircle, FaSignOutAlt, FaBell, FaTimes, FaExclamationTriangle, FaCheck
 } from 'react-icons/fa';
 
-const api = axios.create({ baseURL: 'http://localhost:8000/api' });
+const api = axios.create({ baseURL: '/api' });
 
 // --- ALERT MODAL COMPONENT ---
 function AlertModal({ isOpen, type, title, message, onClose }) {

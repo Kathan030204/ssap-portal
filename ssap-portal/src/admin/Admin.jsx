@@ -12,7 +12,7 @@ import {
     FaPalette
 } from 'react-icons/fa';
 
-const api = axios.create({ baseURL: 'http://localhost:8000/api' });
+const api = axios.create({ baseURL: '/api' });
 
 // --- NOTIFICATION MODAL COMPONENT ---
 const NotificationModal = ({ message, type, onClose }) => {

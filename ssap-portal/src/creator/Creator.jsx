@@ -9,7 +9,7 @@ import {
   FaUserCircle
 } from 'react-icons/fa';
 
-const api = axios.create({ baseURL: 'http://localhost:8000/api' });
+const api = axios.create({ baseURL: '/api' });
 
 export function Creator({ onLogout }) {
   const [activeTab, setActiveTab] = useState('inventory');
@@ -70,10 +70,6 @@ export function Creator({ onLogout }) {
         loggedIn: true
       });
       fetchSections(uid);
-
-      // Background polling
-      const interval = setInterval(() => fetchSections(uid), 5000);
-      return () => clearInterval(interval);
     } else {
       onLogout();
     }
