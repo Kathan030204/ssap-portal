@@ -4,7 +4,7 @@ import {
   FaCheckCircle, FaSearch, FaTimes,
   FaSpinner, FaLayerGroup, FaHome,
   FaClock, FaCheckDouble, FaExclamationTriangle, FaListUl,
-  FaSignOutAlt, FaUserCircle, FaBell, FaTrashAlt, FaPlus, FaDownload, FaHistory, FaEdit
+  FaSignOutAlt, FaUserCircle, FaBell, FaTrashAlt, FaPlus, FaDownload, FaHistory, FaEdit, FaChevronDown, FaChevronUp
 } from 'react-icons/fa';
 
 const api = axios.create({
@@ -25,14 +25,12 @@ export function Tester({ onLogout }) {
   const [reportIssues, setReportIssues] = useState([]);
   const [customTypeText, setCustomTypeText] = useState("");
   const [issueHistory, setIssueHistory] = useState([]);
-  const [isFetchingHistory, setIsFetchingHistory] = useState(false);
+  const [isFetchingHistory, setIsFetchingHistory] = useState(false);// New state to toggle history view
 
   // New state for editing
   const [editingIssueId, setEditingIssueId] = useState(null);
 
-  // --- PERSISTENT ISSUE TYPES STATE ---
-  // REMOVED 'Logic' from the default types list
-  const defaultTypes = ['Bug', 'UI/UX']; 
+  const defaultTypes = ['Bug', 'UI/UX'];
   const [issueTypes, setIssueTypes] = useState(() => {
     const saved = localStorage.getItem('tester_custom_issue_types');
     return saved ? JSON.parse(saved) : defaultTypes;
@@ -44,7 +42,6 @@ export function Tester({ onLogout }) {
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifRef = useRef(null);
 
-  // --- AUTO-CLOSE PANEL ON FILTER CHANGE ---
   useEffect(() => {
     setShowReviewPanel(false);
     setSelectedSection(null);
@@ -97,13 +94,14 @@ export function Tester({ onLogout }) {
     setIssueHistory([]);
     setEditingIssueId(null);
     setIssueData({ severity: 'Major', desc: '', isCustomType: false });
-    setNotifications(prev => prev.filter(n => n.id !== section.id));
 
-    if (section.current_status === 'Issue Logged') {
+    // Always attempt to fetch history if the section has been logged before
+    if (section.current_status === 'Issue Logged' || section.current_status === 'In Testing' || (section.issue_count && section.issue_count > 0)) {
       setIsFetchingHistory(true);
       try {
         const response = await api.get(`/sections/${section.id}`);
         const data = response.data;
+        // Ensure we extract the array correctly based on your API structure
         const history = Array.isArray(data) ? data : (data.issues || [data]);
         setIssueHistory(history);
       } catch (err) {
@@ -116,9 +114,7 @@ export function Tester({ onLogout }) {
 
   const addIssueToReport = () => {
     if (!issueData.desc.trim()) return;
-
     let finalType = issueData.type;
-
     if (issueData.isCustomType) {
       const trimmedCustom = customTypeText.trim();
       if (!trimmedCustom) return;
@@ -138,7 +134,6 @@ export function Tester({ onLogout }) {
     } else {
       setReportIssues([...reportIssues, { ...issueData, type: finalType, id: Date.now() }]);
     }
-
     setIssueData({ severity: 'Major', desc: '', isCustomType: false });
     setCustomTypeText("");
   };
@@ -221,9 +216,9 @@ export function Tester({ onLogout }) {
     const matchesSearch = s.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesTab = activeFilter === 'all' ? true :
       activeFilter === 'pending' ? s.current_status === 'In Testing' :
-      activeFilter === 'logged' ? s.current_status === 'Issue Logged' :
-      activeFilter === 'qa_passed' ? (s.current_status === 'QA Passed' || s.current_status === 'Pending Admin') :
-      activeFilter === 'passed' ? s.current_status === 'Published' : true;
+        activeFilter === 'logged' ? s.current_status === 'Issue Logged' :
+          activeFilter === 'qa_passed' ? (s.current_status === 'QA Passed' || s.current_status === 'Pending Admin') :
+            activeFilter === 'passed' ? s.current_status === 'Published' : true;
     return matchesSearch && matchesTab;
   });
 
@@ -312,17 +307,20 @@ export function Tester({ onLogout }) {
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-4">
                             <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-purple-600 group-hover:bg-purple-100 transition-colors"><FaLayerGroup /></div>
-                            <p className="font-black text-slate-800">{item.title}</p>
+                            <div>
+                              <p className="font-black text-slate-800">{item.title}</p>
+                              {item.issue_count > 0 && <span className="text-[9px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 mt-1 inline-block">RE-LOGGED: {item.issue_count}x</span>}
+                            </div>
                           </div>
                         </td>
                         <td className="px-8 py-6 text-right">
                           <button onClick={(e) => { e.stopPropagation(); handleDownload(item.id, item.title); }} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl mr-2 transition-colors"><FaDownload /></button>
                           <span className={`px-4 py-1.5 rounded-full text-[9px] font-black border uppercase 
-                            ${item.current_status === 'Published' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
-                              item.current_status === 'Pending Admin' ? 'bg-amber-50 text-amber-600 border-amber-100' : 
-                              item.current_status === 'QA Passed' ? 'bg-cyan-50 text-cyan-600 border-cyan-100' :
-                              item.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' : 
-                              'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                            ${item.current_status === 'Published' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                              item.current_status === 'Pending Admin' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                item.current_status === 'QA Passed' ? 'bg-cyan-50 text-cyan-600 border-cyan-100' :
+                                  item.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                    'bg-blue-50 text-blue-600 border-blue-100'}`}>
                             {item.current_status}
                           </span>
                         </td>
@@ -343,68 +341,98 @@ export function Tester({ onLogout }) {
                   <button onClick={() => setShowReviewPanel(false)} className="w-10 h-10 flex items-center justify-center bg-slate-100 rounded-full text-slate-400 hover:bg-slate-900 hover:text-white transition-all"><FaTimes /></button>
                 </div>
 
-                {selectedSection.current_status === 'Issue Logged' ? (
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-2 text-rose-600 font-black text-[10px] uppercase tracking-widest bg-rose-50 p-4 rounded-2xl border border-rose-100"><FaHistory /> Previous Issue History</div>
-                    <div className="space-y-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                      {isFetchingHistory ? <div className="py-10 text-center"><FaSpinner className="animate-spin mx-auto text-rose-500" /></div> :
-                        issueHistory.map((issue, idx) => (
-                          <div key={idx} className="p-6 bg-white border border-rose-100 rounded-3xl shadow-sm">
-                            <div className="flex justify-between mb-3">
-                              <span className="bg-rose-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase">{issue.type || 'Bug'}</span>
-                              <span className="text-[9px] font-black text-rose-400 uppercase">{issue.severity}</span>
-                            </div>
-                            <p className="text-sm text-slate-700 font-bold leading-relaxed">{issue.description || issue.desc}</p>
-                          </div>
-                        ))
-                      }
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {!editingIssueId && <button onClick={() => handleUpdateStatus(selectedSection.id, 'QA Passed')} className="w-full py-6 bg-emerald-500 text-white rounded-4xl font-black uppercase italic tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200">Send to Admin for Approval</button>}
-
-                    <div className={`p-8 rounded-[2.5rem] border transition-all space-y-4 ${editingIssueId ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-100'}`}>
-                      <div className="grid grid-cols-3 gap-2">
-                        {['Minor', 'Major', 'Critical'].map(sev => (
-                          <button key={sev} onClick={() => setIssueData({ ...issueData, severity: sev })} className={`py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${issueData.severity === sev ? 'bg-rose-600 border-rose-600 text-white' : 'bg-white border-slate-100 text-slate-400'}`}>{sev}</button>
-                        ))}
-                      </div>
-
-                      <textarea className="w-full p-5 border border-slate-200 rounded-3xl text-sm font-bold outline-none focus:ring-2 ring-purple-500/10 transition-all h-32" placeholder="Detail the issue found..." value={issueData.desc} onChange={(e) => setIssueData({ ...issueData, desc: e.target.value })} />
-
-                      <div className="flex gap-2">
-                        {editingIssueId && (
-                          <button onClick={() => { setEditingIssueId(null); setIssueData({ severity: 'Major', desc: '', isCustomType: false }); setCustomTypeText(""); }} className="flex-1 py-4 bg-slate-200 text-slate-600 rounded-2xl font-black text-[10px] uppercase hover:bg-slate-300 transition-all">Cancel</button>
-                        )}
-                        <button onClick={addIssueToReport} className={`flex-2 py-4 border-2 rounded-2xl font-black text-[10px] uppercase transition-all ${editingIssueId ? 'bg-purple-600 border-purple-600 text-white shadow-lg' : 'border-dashed border-slate-300 text-slate-400 hover:text-purple-600 hover:border-purple-400'}`}>
-                          {editingIssueId ? 'Save Changes' : <><FaPlus className="inline mr-2" /> Add Issue to Batch</>}
-                        </button>
-                      </div>
-                    </div>
-
-                    {reportIssues.length > 0 && (
-                      <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
-                        <div className="bg-purple-50/50 rounded-2xl border border-purple-100 divide-y divide-purple-100 overflow-hidden">
-                          {reportIssues.map(issue => (
-                            <div key={issue.id} className={`flex justify-between items-center p-4 transition-colors ${editingIssueId === issue.id ? 'bg-purple-100/50' : ''}`}>
-                              <span className="text-[10px] font-black text-purple-900 uppercase tracking-tighter">[{issue.type}] {issue.desc.substring(0, 30)}...</span>
-                              <div className="flex gap-1">
-                                <button onClick={() => startEditIssue(issue)} className="text-blue-500 p-2 hover:bg-blue-100 rounded-lg transition-all"><FaEdit size={14} /></button>
-                                <button onClick={() => removeIssueFromReport(issue.id)} className="text-rose-500 p-2 hover:bg-rose-100 rounded-lg transition-all"><FaTrashAlt size={14} /></button>
+                <div className="space-y-6">
+                  {/* CASE 1: SECTION IS ALREADY LOGGED (Fix Required View) */}
+                  {selectedSection.current_status === 'Issue Logged' ? (
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2 text-rose-600 font-black text-[10px] uppercase tracking-widest bg-rose-50 p-4 rounded-2xl border border-rose-100"><FaHistory /> Active Bug List</div>
+                      <div className="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                        {isFetchingHistory ? <div className="py-10 text-center"><FaSpinner className="animate-spin mx-auto text-rose-500" /></div> :
+                          issueHistory.length > 0 ? issueHistory.map((issue, idx) => (
+                            <div key={idx} className="p-6 bg-white border border-rose-100 rounded-3xl shadow-sm">
+                              <div className="flex justify-between mb-3">
+                                <span className="bg-rose-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase">{issue.type || 'Bug'}</span>
+                                <span className="text-[9px] font-black text-rose-400 uppercase">{issue.severity}</span>
                               </div>
+                              <p className="text-sm text-slate-700 font-bold leading-relaxed">{issue.description || issue.desc}</p>
                             </div>
-                          ))}
-                        </div>
-                        {!editingIssueId && (
-                          <button onClick={() => handleUpdateStatus(selectedSection.id, 'Issue Logged')} className="w-full py-6 bg-rose-600 text-white rounded-4xl font-black uppercase italic tracking-widest shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all">
-                            Submit {reportIssues.length} Bug Report(s)
-                          </button>
-                        )}
+                          )) : <div className="text-center py-10 text-slate-400 italic">No previous history found.</div>
+                        }
                       </div>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  ) : (
+                    /* CASE 2: SECTION IS IN TESTING (Normal/Re-testing View) */
+                    <div className="space-y-6">
+                      <div className="animate-in fade-in slide-in-from-bottom-2">
+                        <div className=" p-4 max-h-60 overflow-y-auto space-y-3 no-scrollbar mb-4">
+                          {isFetchingHistory ? <div className="py-10 text-center"><FaSpinner className="animate-spin mx-auto text-rose-500" /></div> :
+                            issueHistory.length > 0 ? issueHistory.map((issue, idx) => (
+                              <div key={idx} className="p-3">
+                                <div className="flex justify-between mb-3">
+                                  <span className="text-rose-600 py-1 rounded-lg text-[9px] font-black uppercase">#ID: {issue.id}</span>
+                                  <span className="text-[9px] font-black text-rose-400 uppercase">{issue.severity}</span>
+                                </div>
+                                <p className="text-sm text-slate-700 font-bold leading-relaxed">{issue.description || issue.desc}</p>
+                              </div>
+                            )) : <div className="text-center py-10 text-slate-400 italic">No previous history found.</div>
+                          }
+                        </div>
+                      </div>
+
+                      {!editingIssueId && (
+                        <button
+                          onClick={() => handleUpdateStatus(selectedSection.id, 'QA Passed')}
+                          className="w-full py-6 bg-emerald-500 text-white rounded-4xl font-black uppercase italic tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200"
+                        >
+                          Send to Admin for Approval
+                        </button>
+                      )}
+
+                      {/* LOG NEW ISSUES SECTION */}
+                      <div className="pt-6 border-t border-slate-100">
+                        <p className="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest">Found a new bug?</p>
+                        <div className={`p-8 rounded-[2.5rem] border transition-all space-y-4 ${editingIssueId ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-100'}`}>
+                          <div className="grid grid-cols-3 gap-2">
+                            {['Minor', 'Major', 'Critical'].map(sev => (
+                              <button key={sev} onClick={() => setIssueData({ ...issueData, severity: sev })} className={`py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${issueData.severity === sev ? 'bg-rose-600 border-rose-600 text-white' : 'bg-white border-slate-100 text-slate-400'}`}>{sev}</button>
+                            ))}
+                          </div>
+                          <textarea className="w-full p-5 border border-slate-200 rounded-3xl text-sm font-bold outline-none focus:ring-2 ring-purple-500/10 transition-all h-32" placeholder="Detail any remaining or new issues..." value={issueData.desc} onChange={(e) => setIssueData({ ...issueData, desc: e.target.value })} />
+                          <div className="flex gap-2">
+                            {editingIssueId && (
+                              <button onClick={() => { setEditingIssueId(null); setIssueData({ severity: 'Major', desc: '', isCustomType: false }); setCustomTypeText(""); }} className="flex-1 py-4 bg-slate-200 text-slate-600 rounded-2xl font-black text-[10px] uppercase hover:bg-slate-300 transition-all">Cancel</button>
+                            )}
+                            <button onClick={addIssueToReport} className={`flex-2 py-4 border-2 rounded-2xl font-black text-[10px] uppercase transition-all ${editingIssueId ? 'bg-purple-600 border-purple-600 text-white shadow-lg' : 'border-dashed border-slate-300 text-slate-400 hover:text-purple-600 hover:border-purple-400'}`}>
+                              {editingIssueId ? 'Save Changes' : <><FaPlus className="inline mr-2" /> Add Issue to Batch</>}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* BATCH REPORT SUBMISSION */}
+                      {reportIssues.length > 0 && (
+                        <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
+                          <div className="bg-purple-50/50 rounded-2xl border border-purple-100 divide-y divide-purple-100 overflow-hidden">
+                            {reportIssues.map(issue => (
+                              <div key={issue.id} className={`flex justify-between items-center p-4 transition-colors ${editingIssueId === issue.id ? 'bg-purple-100/50' : ''}`}>
+                                <span className="text-[10px] font-black text-purple-900 uppercase tracking-tighter">[{issue.type}] {issue.desc.substring(0, 30)}...</span>
+                                <div className="flex gap-1">
+                                  <button onClick={() => startEditIssue(issue)} className="text-blue-500 p-2 hover:bg-blue-100 rounded-lg transition-all"><FaEdit size={14} /></button>
+                                  <button onClick={() => removeIssueFromReport(issue.id)} className="text-rose-500 p-2 hover:bg-rose-100 rounded-lg transition-all"><FaTrashAlt size={14} /></button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {!editingIssueId && (
+                            <button onClick={() => handleUpdateStatus(selectedSection.id, 'Issue Logged')} className="w-full py-6 bg-rose-600 text-white rounded-4xl font-black uppercase italic tracking-widest shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all">
+                              Submit {reportIssues.length} Bug Report(s)
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
