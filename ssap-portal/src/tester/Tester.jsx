@@ -31,7 +31,8 @@ export function Tester({ onLogout }) {
   const [editingIssueId, setEditingIssueId] = useState(null);
 
   // --- PERSISTENT ISSUE TYPES STATE ---
-  const defaultTypes = ['Bug', 'UI/UX', 'Logic'];
+  // REMOVED 'Logic' from the default types list
+  const defaultTypes = ['Bug', 'UI/UX']; 
   const [issueTypes, setIssueTypes] = useState(() => {
     const saved = localStorage.getItem('tester_custom_issue_types');
     return saved ? JSON.parse(saved) : defaultTypes;
@@ -42,6 +43,14 @@ export function Tester({ onLogout }) {
   const [notifications, setNotifications] = useState([]);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifRef = useRef(null);
+
+  // --- AUTO-CLOSE PANEL ON FILTER CHANGE ---
+  useEffect(() => {
+    setShowReviewPanel(false);
+    setSelectedSection(null);
+    setEditingIssueId(null);
+    setReportIssues([]);
+  }, [activeFilter]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -75,7 +84,6 @@ export function Tester({ onLogout }) {
   }, [fetchInitialData]);
 
   const openReview = async (section) => {
-    // UPDATED: Prevent editing if finalized OR sent to Admin
     const finalizedStatuses = ['Published', 'Ready for Store', 'QA Passed', 'Pending Admin'];
     if (finalizedStatuses.includes(section.current_status)) {
       setShowReviewPanel(false);
@@ -145,7 +153,6 @@ export function Tester({ onLogout }) {
       isCustomType: !isStandardType
     });
     if (!isStandardType) setCustomTypeText(issue.type);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const removeIssueFromReport = (id) => {
@@ -170,7 +177,6 @@ export function Tester({ onLogout }) {
         );
         await Promise.all(promises);
       } else {
-        // UPDATED LOGIC: Send to Admin instead of direct QA Passed
         await api.put(`/sections/${id}`, {
           current_status: 'Pending Admin',
           description: 'Tester approved. Waiting for Admin to allocate a Designer.',
@@ -203,7 +209,6 @@ export function Tester({ onLogout }) {
     }
   };
 
-  // --- UPDATED STATS ---
   const stats = {
     total: sections.length,
     pending: sections.filter(s => s.current_status === 'In Testing').length,
@@ -212,7 +217,6 @@ export function Tester({ onLogout }) {
     published: sections.filter(s => s.current_status === 'Published').length,
   };
 
-  // --- UPDATED FILTERING ---
   const filteredSections = sections.filter(s => {
     const matchesSearch = s.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesTab = activeFilter === 'all' ? true :
@@ -225,7 +229,6 @@ export function Tester({ onLogout }) {
 
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
-
       {/* SIDEBAR */}
       <div className="w-72 bg-slate-900 flex flex-col sticky top-0 h-screen">
         <div className="p-8 text-white font-black italic text-2xl flex items-center gap-2">
@@ -281,7 +284,6 @@ export function Tester({ onLogout }) {
           </div>
         </header>
 
-        {/* STATUS CARDS GRID */}
         <div className="grid grid-cols-5 gap-4 mb-10">
           <StatusCard label="Total" count={stats.total} icon={<FaListUl />} color="bg-slate-100 text-slate-600" />
           <StatusCard label="Pending" count={stats.pending} icon={<FaClock />} color="bg-blue-50 text-blue-600" />
@@ -304,7 +306,6 @@ export function Tester({ onLogout }) {
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filteredSections.map(item => {
-                    // UPDATED: Include Pending Admin in finalized statuses
                     const isFinalized = ['Published', 'Ready for Store', 'QA Passed', 'Pending Admin'].includes(item.current_status);
                     return (
                       <tr key={item.id} onClick={() => openReview(item)} className={`group transition-all ${isFinalized ? 'cursor-default opacity-80' : 'cursor-pointer hover:bg-slate-50'} ${selectedSection?.id === item.id ? 'bg-purple-50' : ''}`}>
@@ -430,6 +431,7 @@ export function Tester({ onLogout }) {
   );
 }
 
+// Helper Components
 function StatusCard({ label, count, icon, color }) {
   return (
     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
