@@ -4,7 +4,8 @@ import {
   FaCheckCircle, FaSearch, FaTimes,
   FaSpinner, FaLayerGroup, FaHome,
   FaClock, FaCheckDouble, FaExclamationTriangle, FaListUl,
-  FaSignOutAlt, FaUserCircle, FaBell, FaTrashAlt, FaPlus, FaDownload, FaHistory, FaEdit, FaChevronDown, FaChevronUp
+  FaUserCircle, FaBell, FaTrashAlt, FaPlus,
+  FaDownload, FaHistory, FaEdit
 } from 'react-icons/fa';
 
 const api = axios.create({
@@ -25,15 +26,12 @@ export function Tester({ onLogout }) {
   const [reportIssues, setReportIssues] = useState([]);
   const [customTypeText, setCustomTypeText] = useState("");
   const [issueHistory, setIssueHistory] = useState([]);
-  const [isFetchingHistory, setIsFetchingHistory] = useState(false);// New state to toggle history view
-
-  // New state for editing
+  const [isFetchingHistory, setIsFetchingHistory] = useState(false);
   const [editingIssueId, setEditingIssueId] = useState(null);
 
-  const defaultTypes = ['Bug', 'UI/UX'];
   const [issueTypes, setIssueTypes] = useState(() => {
     const saved = localStorage.getItem('tester_custom_issue_types');
-    return saved ? JSON.parse(saved) : defaultTypes;
+    return saved ? JSON.parse(saved) :null;
   });
 
   // --- IDENTITY & NOTIFICATIONS ---
@@ -80,45 +78,56 @@ export function Tester({ onLogout }) {
     fetchInitialData();
   }, [fetchInitialData]);
 
+  const fetchSectionHistory = async (sectionId) => {
+    setIsFetchingHistory(true);
+    try {
+      const response = await api.get(`/sections/${sectionId}`);
+      const data = response.data;
+      const history = Array.isArray(data) ? data : (data.issues || [data]);
+      setIssueHistory(history);
+    } catch (err) {
+      console.error("History fetch failed:", err);
+    } finally {
+      setIsFetchingHistory(false);
+    }
+  };
+
   const openReview = async (section) => {
     const finalizedStatuses = ['Published', 'Ready for Store', 'QA Passed', 'Pending Admin'];
-    if (finalizedStatuses.includes(section.current_status)) {
-      setShowReviewPanel(false);
-      setSelectedSection(null);
-      return;
-    }
+    if (finalizedStatuses.includes(section.current_status)) return;
 
     setSelectedSection(section);
     setShowReviewPanel(true);
     setReportIssues([]);
-    setIssueHistory([]);
     setEditingIssueId(null);
     setIssueData({ severity: 'Major', desc: '', isCustomType: false });
-
-    // Always attempt to fetch history if the section has been logged before
-    if (section.current_status === 'Issue Logged' || section.current_status === 'In Testing' || (section.issue_count && section.issue_count > 0)) {
-      setIsFetchingHistory(true);
-      try {
-        const response = await api.get(`/sections/${section.id}`);
-        const data = response.data;
-        // Ensure we extract the array correctly based on your API structure
-        const history = Array.isArray(data) ? data : (data.issues || [data]);
-        setIssueHistory(history);
-      } catch (err) {
-        console.error("History fetch failed", err);
-      } finally {
-        setIsFetchingHistory(false);
-      }
-    }
+    fetchSectionHistory(section.id);
   };
 
-  const addIssueToReport = () => {
+  const startEditIssue = (issue) => {
+    setEditingIssueId(issue.id);
+    const description = issue.description || issue.desc || "";
+
+    setIssueData({
+      severity: issue.severity || 'Major',
+      desc: description,
+    });
+  };
+
+  const removeIssueFromReport = (id) => {
+    if (editingIssueId === id) {
+      setEditingIssueId(null);
+      setIssueData({ severity: 'Major', desc: '', isCustomType: false});
+    }
+    setReportIssues(prev => prev.filter(issue => issue.id !== id));
+  };
+
+  const handleAction = async () => {
     if (!issueData.desc.trim()) return;
+
     let finalType = issueData.type;
     if (issueData.isCustomType) {
-      const trimmedCustom = customTypeText.trim();
-      if (!trimmedCustom) return;
-      finalType = trimmedCustom;
+      finalType = customTypeText.trim() || 'Custom';
       if (!issueTypes.includes(finalType)) {
         const updatedTypes = [...issueTypes, finalType];
         setIssueTypes(updatedTypes);
@@ -126,36 +135,37 @@ export function Tester({ onLogout }) {
       }
     }
 
-    if (editingIssueId) {
-      setReportIssues(reportIssues.map(issue =>
-        issue.id === editingIssueId ? { ...issueData, type: finalType, id: editingIssueId } : issue
-      ));
-      setEditingIssueId(null);
+    const isDbIssue = issueHistory.find(h => h.id === editingIssueId);
+
+    if (isDbIssue) {
+      try {
+        await api.put(`/sections/${selectedSection.id}`, {
+          issue_id: editingIssueId,
+          current_status: 'Issue Logged',
+          type: finalType,
+          severity: issueData.severity,
+          description: issueData.desc,
+          title: selectedSection.title
+        });
+        setEditingIssueId(null);
+        setIssueData({ severity: 'Major', desc: '', isCustomType: false });
+        fetchSectionHistory(selectedSection.id);
+      } catch (err) {
+        console.error("Update failed:", err);
+        alert("Failed to update database record.");
+      }
     } else {
-      setReportIssues([...reportIssues, { ...issueData, type: finalType, id: Date.now() }]);
-    }
-    setIssueData({ severity: 'Major', desc: '', isCustomType: false });
-    setCustomTypeText("");
-  };
-
-  const startEditIssue = (issue) => {
-    setEditingIssueId(issue.id);
-    const isStandardType = defaultTypes.includes(issue.type);
-    setIssueData({
-      type: isStandardType ? issue.type : 'Bug',
-      severity: issue.severity,
-      desc: issue.desc,
-      isCustomType: !isStandardType
-    });
-    if (!isStandardType) setCustomTypeText(issue.type);
-  };
-
-  const removeIssueFromReport = (id) => {
-    if (editingIssueId === id) {
-      setEditingIssueId(null);
+      if (editingIssueId) {
+        setReportIssues(reportIssues.map(issue =>
+          issue.id === editingIssueId ? { ...issueData, type: finalType, id: editingIssueId } : issue
+        ));
+        setEditingIssueId(null);
+      } else {
+        setReportIssues([...reportIssues, { ...issueData, type: finalType, id: Date.now() }]);
+      }
       setIssueData({ severity: 'Major', desc: '', isCustomType: false });
+      setCustomTypeText("");
     }
-    setReportIssues(reportIssues.filter(issue => issue.id !== id));
   };
 
   const handleUpdateStatus = async (id, newStatus) => {
@@ -174,14 +184,15 @@ export function Tester({ onLogout }) {
       } else {
         await api.put(`/sections/${id}`, {
           current_status: 'Pending Admin',
-          description: 'Tester approved. Waiting for Admin to allocate a Designer.',
-          notes: 'QA Approval - Sent to Admin for Allocation'
+          description: 'Tester approved.',
+          notes: 'QA Approval'
         });
       }
       fetchInitialData();
       setShowReviewPanel(false);
       setSelectedSection(null);
-    } catch {
+    } catch (err) {
+      console.error("Status update failed:", err);
       alert("Database Sync Failed");
     }
   };
@@ -189,17 +200,15 @@ export function Tester({ onLogout }) {
   const handleDownload = async (sectionId, title) => {
     try {
       const response = await api.get(`/sections/${sectionId}/download`, { responseType: 'blob' });
-      const section = sections.find(s => s.id === sectionId);
-      const originalFileName = section?.zip_url ? section.zip_url.split('/').pop() : 'file.zip';
-      const extension = originalFileName.split('.').pop();
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${title.replace(/[^a-z0-9]/gi, '_')}.${extension}`);
+      link.setAttribute('download', `${title.replace(/[^a-z0-9]/gi, '_')}.zip`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch {
+    } catch (err) {
+      console.error("Download failed:", err);
       alert("Download failed.");
     }
   };
@@ -254,6 +263,7 @@ export function Tester({ onLogout }) {
         <header className="flex justify-between items-center mb-10">
           <h2 className="text-4xl font-black italic">Tester Dashboard</h2>
           <div className="flex items-center gap-4">
+            {/* NOTIFICATIONS */}
             <div className="relative" ref={notifRef}>
               <button onClick={() => setShowNotifDropdown(!showNotifDropdown)} className="p-4 bg-white border border-slate-200 rounded-2xl relative text-slate-400 hover:text-purple-500 transition-all shadow-sm">
                 <FaBell size={20} />
@@ -272,6 +282,7 @@ export function Tester({ onLogout }) {
                 </div>
               )}
             </div>
+
             <div className="relative">
               <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input type="text" placeholder="Search my assets..." className="pl-12 pr-6 py-4 bg-white border border-slate-200 rounded-2xl w-80 shadow-sm outline-none focus:ring-2 ring-purple-500/20" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -282,7 +293,7 @@ export function Tester({ onLogout }) {
         <div className="grid grid-cols-5 gap-4 mb-10">
           <StatusCard label="Total" count={stats.total} icon={<FaListUl />} color="bg-slate-100 text-slate-600" />
           <StatusCard label="Pending" count={stats.pending} icon={<FaClock />} color="bg-blue-50 text-blue-600" />
-          <StatusCard label="Bugs" count={stats.logged} icon={<FaExclamationTriangle />} color="bg-rose-50 text-rose-600" />
+          <StatusCard label="Issue Logged" count={stats.logged} icon={<FaExclamationTriangle />} color="bg-rose-50 text-rose-600" />
           <StatusCard label="QA Passed" count={stats.qaPassed} icon={<FaCheckCircle />} color="bg-cyan-50 text-cyan-600" />
           <StatusCard label="Published" count={stats.published} icon={<FaCheckDouble />} color="bg-emerald-50 text-emerald-600" />
         </div>
@@ -296,39 +307,32 @@ export function Tester({ onLogout }) {
                 <thead className="bg-slate-50/50 border-b border-slate-100">
                   <tr>
                     <th className="px-8 py-5 text-base font-black uppercase tracking-widest text-slate-600">Asset Name</th>
-                    <th className="px-6 py-5 text-base text-left font-black uppercase tracking-widest text-slate-600">Status</th>
+                    <th className="px-6 py-5 text-base font-black uppercase tracking-widest text-slate-600">Status</th>
                     <th className="px-8 py-5 text-base font-black uppercase tracking-widest text-slate-600 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {filteredSections.map(item => {
-                    const isFinalized = ['Published', 'Ready for Store', 'QA Passed', 'Pending Admin'].includes(item.current_status);
-                    return (
-                      <tr key={item.id} onClick={() => openReview(item)} className={`group transition-all ${isFinalized ? 'cursor-default opacity-80' : 'cursor-pointer hover:bg-slate-50'} ${selectedSection?.id === item.id ? 'bg-purple-50' : ''}`}>
-                        <td className="px-8 py-6">
-                          <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-purple-600 group-hover:bg-purple-100 transition-colors"><FaLayerGroup /></div>
-                            <div>
-                              <p className="font-black text-slate-800">{item.title}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-6 text-left">
-                          <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border uppercase 
-                            ${item.current_status === 'Published' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                              item.current_status === 'Pending Admin' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                item.current_status === 'QA Passed' ? 'bg-cyan-50 text-cyan-600 border-cyan-100' :
-                                  item.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                                    'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                            {item.current_status}
-                          </span>
-                        </td>
-                        <td className="px-8 py-6 text-right">
-                          <button onClick={(e) => { e.stopPropagation(); handleDownload(item.id, item.title); }} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl mr-2 transition-colors cursor-pointer"><FaDownload /></button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {filteredSections.map(item => (
+                    <tr key={item.id} onClick={() => openReview(item)} className={`group transition-all cursor-pointer hover:bg-slate-50 ${selectedSection?.id === item.id ? 'bg-purple-50' : ''}`}>
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-purple-600 transition-colors"><FaLayerGroup /></div>
+                          <p className="font-black text-slate-800">{item.title}</p>
+                        </div>
+                      </td>
+                      <td className="py-6">
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border uppercase 
+                          ${item.current_status === 'Published' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                            item.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                              'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                          {item.current_status}
+                        </span>
+                      </td>
+                      <td className="px-8 py-6 text-right">
+                        <button onClick={(e) => { e.stopPropagation(); handleDownload(item.id, item.title); }} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"><FaDownload /></button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -337,100 +341,86 @@ export function Tester({ onLogout }) {
               <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl p-10 h-fit sticky top-10 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="flex justify-between items-center mb-8">
                   <div>
-                    <span className="text-[10px] font-black uppercase text-purple-500 tracking-widest">{editingIssueId ? 'Editing Issue' : 'Diagnostic Mode'}</span>
+                    <span className="text-[10px] font-black uppercase text-purple-500 tracking-widest">
+                      {editingIssueId ? 'Editing Entry' : 'Review Panel'}
+                    </span>
                     <h3 className="text-3xl font-black italic">{selectedSection.title}</h3>
                   </div>
-                  <button onClick={() => setShowReviewPanel(false)} className="w-10 h-10 flex items-center justify-center bg-slate-100 rounded-full text-slate-400 hover:bg-slate-900 hover:text-white transition-all"><FaTimes /></button>
+                  <button onClick={() => setShowReviewPanel(false)} className="w-10 h-10 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-900 hover:text-white transition-all"><FaTimes /></button>
                 </div>
 
-                <div className="space-y-6">
-                  {/* CASE 1: SECTION IS ALREADY LOGGED (Fix Required View) */}
-                  {selectedSection.current_status === 'Issue Logged' ? (
-                    <div className="space-y-6">
-                      <div className="flex items-center gap-2 text-rose-600 font-black text-[10px] uppercase tracking-widest bg-rose-50 p-4 rounded-2xl border border-rose-100"><FaHistory /> Active Bug List</div>
-                      <div className="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
-                        {isFetchingHistory ? <div className="py-10 text-center"><FaSpinner className="animate-spin mx-auto text-rose-500" /></div> :
-                          issueHistory.length > 0 ? issueHistory.map((issue, idx) => (
-                            <div key={idx} className="p-6 bg-white border border-rose-100 rounded-3xl shadow-sm">
-                              <div className="flex justify-between mb-3">
-                                <span className="bg-rose-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase">{issue.type || 'Bug'}</span>
-                                <span className="text-[9px] font-black text-rose-400 uppercase">{issue.severity}</span>
-                              </div>
-                              <p className="text-sm text-slate-700 font-bold leading-relaxed">{issue.description || issue.desc}</p>
-                            </div>
-                          )) : <div className="text-center py-10 text-slate-400 italic">No previous history found.</div>
-                        }
-                      </div>
+                {/* EDIT FORM */}
+                {(editingIssueId || selectedSection.current_status === 'In Testing') && (
+                  <div className={`p-6 mb-6 rounded-3xl border ${editingIssueId ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-100'}`}>
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {['Minor', 'Major', 'Critical'].map(sev => (
+                        <button key={sev} onClick={() => setIssueData({ ...issueData, severity: sev })} className={`py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${issueData.severity === sev ? 'bg-rose-600 border-rose-600 text-white' : 'bg-white border-slate-100 text-slate-400'}`}>{sev}</button>
+                      ))}
                     </div>
-                  ) : (
-                    /* CASE 2: SECTION IS IN TESTING (Normal/Re-testing View) */
-                    <div className="space-y-6">
-                      <div className="animate-in fade-in slide-in-from-bottom-2">
-                        <div className=" p-4 max-h-60 overflow-y-auto space-y-3 no-scrollbar mb-4">
-                          {isFetchingHistory ? <div className="py-10 text-center"><FaSpinner className="animate-spin mx-auto text-rose-500" /></div> :
-                            issueHistory.length > 0 ? issueHistory.map((issue, idx) => (
-                              <div key={idx} className="p-3">
-                                <div className="flex justify-between mb-3">
-                                  <span className="text-rose-600 py-1 rounded-lg text-[9px] font-black uppercase">#ID: {issue.id}</span>
-                                  <span className="text-[9px] font-black text-rose-400 uppercase">{issue.severity}</span>
-                                </div>
-                                <p className="text-sm text-slate-700 font-bold leading-relaxed">{issue.description || issue.desc}</p>
-                              </div>
-                            )) : <div className="text-center py-10 text-slate-400 italic">No previous history found.</div>
-                          }
-                        </div>
-                      </div>
+                    <textarea
+                      className="w-full p-4 border border-slate-200 rounded-2xl text-sm font-bold h-24 mb-4 outline-none focus:ring-2 ring-purple-500/20"
+                      placeholder="Describe the issue..."
+                      value={issueData.desc}
+                      onChange={(e) => setIssueData({ ...issueData, desc: e.target.value })}
+                    />
+                    <div className="flex gap-2">
+                      {editingIssueId && <button onClick={() => { setEditingIssueId(null); setIssueData({ severity: 'Major', desc: '', isCustomType: false }) }} className="flex-1 py-3 bg-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase">Cancel</button>}
+                      <button onClick={handleAction} className="flex-2 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase">
+                        {editingIssueId ? 'Update Record' : 'Add to Batch'}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-                      {!editingIssueId && (
-                        <button
-                          onClick={() => handleUpdateStatus(selectedSection.id, 'QA Passed')}
-                          className="w-full py-6 bg-emerald-500 text-white rounded-4xl font-black uppercase italic tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200"
-                        >
-                          Send to Admin for Approval
-                        </button>
-                      )}
-
-                      {/* LOG NEW ISSUES SECTION */}
-                      <div className="pt-6 border-t border-slate-100">
-                        <p className="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest">Found a new bug?</p>
-                        <div className={`p-8 rounded-[2.5rem] border transition-all space-y-4 ${editingIssueId ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-100'}`}>
-                          <div className="grid grid-cols-3 gap-2">
-                            {['Minor', 'Major', 'Critical'].map(sev => (
-                              <button key={sev} onClick={() => setIssueData({ ...issueData, severity: sev })} className={`py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${issueData.severity === sev ? 'bg-rose-600 border-rose-600 text-white' : 'bg-white border-slate-100 text-slate-400'}`}>{sev}</button>
-                            ))}
-                          </div>
-                          <textarea className="w-full p-5 border border-slate-200 rounded-3xl text-sm font-bold outline-none focus:ring-2 ring-purple-500/10 transition-all h-32" placeholder="Detail any remaining or new issues..." value={issueData.desc} onChange={(e) => setIssueData({ ...issueData, desc: e.target.value })} />
+                <div className="space-y-6">
+                  {/* LOCAL BATCH (BEFORE DB SUBMISSION) */}
+                  {reportIssues.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-black uppercase text-purple-600 tracking-widest">New Batch to Submit</p>
+                      {reportIssues.map(issue => (
+                        <div key={issue.id} className="p-4 bg-purple-50 border border-purple-100 rounded-2xl flex justify-between items-center">
+                          <span className="text-xs font-bold text-purple-900">{issue.desc.substring(0, 30)}...</span>
                           <div className="flex gap-2">
-                            {editingIssueId && (
-                              <button onClick={() => { setEditingIssueId(null); setIssueData({ severity: 'Major', desc: '', isCustomType: false }); setCustomTypeText(""); }} className="flex-1 py-4 bg-slate-200 text-slate-600 rounded-2xl font-black text-[10px] uppercase hover:bg-slate-300 transition-all">Cancel</button>
-                            )}
-                            <button onClick={addIssueToReport} className={`flex-2 py-4 border-2 rounded-2xl font-black text-[10px] uppercase transition-all ${editingIssueId ? 'bg-purple-600 border-purple-600 text-white shadow-lg' : 'border-dashed border-slate-300 text-slate-400 hover:text-purple-600 hover:border-purple-400'}`}>
-                              {editingIssueId ? 'Save Changes' : <><FaPlus className="inline mr-2" /> Add Issue to Batch</>}
-                            </button>
+                            <button onClick={() => startEditIssue(issue)} className="text-blue-500 p-1"><FaEdit /></button>
+                            <button onClick={() => removeIssueFromReport(issue.id)} className="text-rose-500 p-1"><FaTrashAlt /></button>
                           </div>
                         </div>
-                      </div>
+                      ))}
+                    </div>
+                  )}
 
-                      {/* BATCH REPORT SUBMISSION */}
-                      {reportIssues.length > 0 && (
-                        <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
-                          <div className="bg-purple-50/50 rounded-2xl border border-purple-100 divide-y divide-purple-100 overflow-hidden">
-                            {reportIssues.map(issue => (
-                              <div key={issue.id} className={`flex justify-between items-center p-4 transition-colors ${editingIssueId === issue.id ? 'bg-purple-100/50' : ''}`}>
-                                <span className="text-[10px] font-black text-purple-900 uppercase tracking-tighter">[{issue.type}] {issue.desc.substring(0, 30)}...</span>
-                                <div className="flex gap-1">
-                                  <button onClick={() => startEditIssue(issue)} className="text-blue-500 p-2 hover:bg-blue-100 rounded-lg transition-all"><FaEdit size={14} /></button>
-                                  <button onClick={() => removeIssueFromReport(issue.id)} className="text-rose-500 p-2 hover:bg-rose-100 rounded-lg transition-all"><FaTrashAlt size={14} /></button>
-                                </div>
+                  {/* HISTORY LIST */}
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Already Logged Issues</p>
+                    <div className="max-h-60 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                      {isFetchingHistory ? <FaSpinner className="animate-spin mx-auto text-rose-500" /> :
+                        issueHistory.length > 0 ? issueHistory.map((issue) => (
+                          <div key={issue.id} className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm flex justify-between items-start">
+                            <div>
+                              <div className="flex gap-2 mb-1">
+                                <span className="text-[8px] bg-rose-100 text-rose-600 px-2 py-0.5 rounded font-black uppercase">{issue.severity}</span>
+                                <span className="text-[8px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-black uppercase">{issue.type}</span>
                               </div>
-                            ))}
+                              <p className="text-xs font-bold text-slate-700">{issue.description || issue.desc}</p>
+                            </div>
+                            <button onClick={() => startEditIssue(issue)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"><FaEdit size={14} /></button>
                           </div>
-                          {!editingIssueId && (
-                            <button onClick={() => handleUpdateStatus(selectedSection.id, 'Issue Logged')} className="w-full py-6 bg-rose-600 text-white rounded-4xl font-black uppercase italic tracking-widest shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all">
-                              Submit {reportIssues.length} Bug Report(s)
-                            </button>
-                          )}
-                        </div>
+                        )) : <p className="text-center text-xs text-slate-400 italic">No history found</p>
+                      }
+                    </div>
+                  </div>
+
+                  {/* SUBMISSION BUTTONS */}
+                  {selectedSection.current_status === 'In Testing' && (
+                    <div className="pt-6 border-t border-slate-100 space-y-3">
+                      {reportIssues.length > 0 ? (
+                        <button onClick={() => handleUpdateStatus(selectedSection.id, 'Issue Logged')} className="w-full py-5 bg-rose-600 text-white rounded-3xl font-black uppercase italic tracking-widest shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all">
+                          Submit Batch ({reportIssues.length})
+                        </button>
+                      ) : (
+                        <button onClick={() => handleUpdateStatus(selectedSection.id, 'QA Passed')} className="w-full py-5 bg-emerald-500 text-white rounded-3xl font-black uppercase italic tracking-widest shadow-lg shadow-emerald-200 hover:bg-emerald-600 transition-all">
+                          Approve Section
+                        </button>
                       )}
                     </div>
                   )}
@@ -459,7 +449,7 @@ function StatusCard({ label, count, icon, color }) {
 
 function SidebarItem({ icon, label, active, onClick, count }) {
   return (
-    <button onClick={onClick} className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all ${active ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-800/50'}`}>
+    <button onClick={onClick} className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all ${active ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-800/50'}`}>
       <div className="flex items-center gap-3 font-bold text-sm uppercase tracking-tight">{icon} {label}</div>
       {count !== undefined && <span className="text-[10px] font-black bg-slate-900 px-2 py-1 rounded-lg border border-slate-700">{count}</span>}
     </button>
