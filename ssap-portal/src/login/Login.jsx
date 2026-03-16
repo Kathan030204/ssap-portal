@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   FaUserEdit, FaVial, FaPaintBrush, FaUserShield,
-  FaArrowRight, FaFingerprint, FaKey, FaArrowLeft,
-  FaEye, FaEyeSlash
+  FaArrowRight, FaFingerprint, FaEye, FaEyeSlash
 } from 'react-icons/fa';
 import { Creator } from '../creator/Creator';
 import { Tester } from '../tester/Tester';
