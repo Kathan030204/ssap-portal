@@ -15,8 +15,6 @@ export function Login() {
   const [selectedChip, setSelectedChip] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  // NEW STATE: Toggle password visibility
   const [showPassword, setShowPassword] = useState(false);
 
   const roles = [
@@ -98,55 +96,86 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 flex flex-col items-center justify-center p-6 font-sans">
+    <div className="min-h-screen bg-white text-slate-900 flex flex-col items-center justify-center p-4 sm:p-6 font-sans">
       <div className="relative w-full max-w-md space-y-8">
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 mb-2">
-            {<FaFingerprint size={24} />}
+            <FaFingerprint size={24} />
           </div>
-          <div className="text-3xl font-extrabold text-slate-900">
+          <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Sign in to Portal
           </div>
+          <p className="text-slate-500 text-sm">Select your role to continue</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
-          <div className="flex flex-row justify-center gap-2">
+          {/* RESPONSIVE ROLE SELECTOR: Grid on mobile, flex row on tablet+ */}
+          <div className="grid grid-cols-2 sm:flex sm:flex-row justify-center gap-2">
             {roles.map((role) => (
-              <button key={role.id}type="button" onClick={() => setSelectedChip(role.id)} className={`flex items-center gap-3 px-3 py-2 rounded-full border text-base font-bold transition-all cursor-pointer ${selectedChip === role.id? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105': 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}>
-                <span className={selectedChip === role.id ? 'text-white' : role.color}>{role.icon}</span>
+              <button 
+                key={role.id} 
+                type="button" 
+                onClick={() => setSelectedChip(role.id)} 
+                className={`flex items-center justify-center sm:justify-start gap-2 px-3 py-2.5 rounded-xl sm:rounded-full border text-sm font-bold transition-all cursor-pointer ${
+                  selectedChip === role.id 
+                  ? 'bg-slate-900 border-slate-900 text-white shadow-lg scale-[1.02]' 
+                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                }`}
+              >
+                <span className={selectedChip === role.id ? 'text-white' : role.color}>
+                  {role.icon}
+                </span>
                 <span className="capitalize">{role.id}</span>
               </button>
             ))}
           </div>
 
-          <div className="space-y-2">
-            <input type="email" placeholder="Email" className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none text-sm focus:ring-2 focus:ring-indigo-500/20" value={email} onChange={(e) => setEmail(e.target.value)} required />
-
-            {/* PASSWORD INPUT WITH TOGGLE */}
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none text-sm focus:ring-2 focus:ring-indigo-500/20"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+              <input 
+                type="email" 
+                placeholder="name@gmail.com" 
+                className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                required 
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
-              >
-                {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
-              </button>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                >
+                  {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                </button>
+              </div>
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 cursor-pointer">
-            {loading ? "Verifying..." : "Continue"} <FaArrowRight size={12} />
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-indigo-200 shadow-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 cursor-pointer mt-2"
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">Verifying credentials...</span>
+            ) : (
+              <>Continue to Workspace <FaArrowRight size={12} /></>
+            )}
           </button>
-          <div className="text-center">
-          </div>
         </form>
       </div>
     </div>
