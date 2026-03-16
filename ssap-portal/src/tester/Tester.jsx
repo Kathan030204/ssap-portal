@@ -393,15 +393,15 @@ export function Tester({ onLogout }) {
                           </td>
                           <td className="px-6 py-6">
                             {item.live_link ? (
-                              <a href={item.live_link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="group/link flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-purple-600">
-                                <span className="max-w-25 truncate">{item.live_link}</span>
+                              <a href={item.live_link} target="_blank" onClick={(e) => e.stopPropagation()} className="group/link flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-purple-600">
+                                <span className="max-w-25">{item.live_link}</span>
                               </a>
                             ) : <span className="text-[10px] font-bold italic text-slate-300">N/A</span>}
                           </td>
                           <td className="px-6 py-6">
                             {item.shopify_admin_link ? (
-                              <a href={item.shopify_admin_link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="group/link flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-purple-600">
-                                <span className="max-w-25 truncate">{item.shopify_admin_link}</span>
+                              <a href={item.shopify_admin_link} target="_blank" onClick={(e) => e.stopPropagation()} className="group/link flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-purple-600">
+                                <span className="max-w-25">{item.shopify_admin_link}</span>
                               </a>
                             ) : <span className="text-[10px] font-bold italic text-slate-300">N/A</span>}
                           </td>
