@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import {
-  FaUpload, FaBug, FaCheckCircle, FaSpinner,
+  FaUpload, FaBug, FaCheckCircle,
   FaEye, FaTimes, FaPlus, FaSyncAlt,
-  FaFileAlt, FaFlask, FaLayerGroup,
-  FaHome, FaBoxOpen,
-  FaSignOutAlt, FaBell,
-  FaUserCircle, FaHourglassHalf
+  FaFlask,FaHome, FaBoxOpen, FaBell,
+  FaUserCircle
 } from 'react-icons/fa';
 
 const api = axios.create({ baseURL: '/api' });
