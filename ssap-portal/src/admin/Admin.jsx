@@ -549,10 +549,10 @@ export function Admin({ onLogout }) {
                                                             {sec.current_status === 'Ready for Store' && (
                                                                 <>
                                                                     <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="flex items-center gap-2 bg-emerald-600 text-white tracking-wider px-3 py-2 rounded-xl font-black text-xs hover:bg-rose-100 transition-all">
-                                                                        <FaRocket /> Publish to Store
+                                                                        Publish
                                                                     </button>
-                                                                    <button onClick={() => handleRejectAssets(sec.id)} className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-rose-100 transition-all border border-rose-100">
-                                                                        <FaTimes /> REJECT ASSETS
+                                                                    <button onClick={() => handleRejectAssets(sec.id)} className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 tracking-tight rounded-xl font-black text-xs hover:bg-rose-100 transition-all border border-rose-100">
+                                                                        REJECT ASSETS
                                                                     </button>
                                                                 </>
                                                             )}
