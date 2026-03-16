@@ -24,7 +24,6 @@ class IssuesController extends Controller
     {
         $validated = $request->validate([
             'section_id'  => 'required|exists:sections,id',
-            'type'        => 'required|string',
             'severity'    => 'required|string',
             'description' => 'required|string',
         ]);
@@ -32,7 +31,6 @@ class IssuesController extends Controller
         // 1. Create the Issue
         $issue = Testing::create([
             'section_id'  => $validated['section_id'],
-            'type'        => $validated['type'],
             'severity'    => $validated['severity'],
             'description' => $validated['description'],
         ]);
