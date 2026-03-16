@@ -653,8 +653,8 @@ export function Admin({ onLogout }) {
                         {activeTab === 'users' && (
                             <div className="space-y-6">
                                 <div className="flex justify-between items-center">
-                                    <h2 className="text-3xl font-black">User & Role Permissions</h2>
-                                    <button onClick={openCreateModal} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 cursor-pointer"><FaPlus /> Create Member</button>
+                                    <h2 className="text-3xl font-extrabold">User & Role Permissions</h2>
+                                    <button onClick={openCreateModal} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 cursor-pointer"><FaPlus /> Create Member</button>
                                 </div>
                                 <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
                                     <table className="w-full text-left">
@@ -670,8 +670,8 @@ export function Admin({ onLogout }) {
                                             {accounts.map(acc => (
                                                 <tr key={acc.id} className="hover:bg-slate-50 transition-colors">
                                                     <td className="px-6 py-4 font-bold text-slate-500">{acc.id}</td>
-                                                    <td className="px-6 py-4 font-black">{acc.username}<br /><span className="text-slate-400 font-medium">{acc.email}</span></td>
-                                                    <td className="px-6 py-4 font-black text-[10px] text-indigo-600 uppercase">{acc.role}</td>
+                                                    <td className="px-6 py-4 font-bold">{acc.username}<br /><span className="text-slate-400 font-medium">{acc.email}</span></td>
+                                                    <td className="px-6 py-4 font-bold text-[10px] text-indigo-600 uppercase">{acc.role}</td>
                                                     <td className="px-6 py-4 text-right flex justify-end gap-10">
                                                         <button onClick={() => openEditModal(acc)} className="text-blue-500 hover:text-blue-700 transition-colors cursor-pointer" title="Edit User Role"><FaEdit size={18} /></button>
                                                         <button onClick={() => handleDeleteAccount(acc.id)} className="text-rose-400 hover:text-rose-600 transition-colors cursor-pointer" title="Delete User"><FaTrash size={16} /></button>
