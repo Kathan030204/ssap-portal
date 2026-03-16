@@ -589,8 +589,8 @@ export function Admin({ onLogout }) {
                                                                 {/* Standard Actions */}
                                                                 {sec.current_status === 'Ready for Store' && (
                                                                     <>
-                                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-3 py-2 rounded-xl font-black text-xs cursor-pointer">Publish</button>
-                                                                        <button onClick={() => handleRejectAssets(sec.id)} className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 tracking-tight rounded-xl font-black text-xs cursor-pointer">REJECT</button>
+                                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-3 py-2 rounded-xl font-bold tracking-widest text-xs cursor-pointer">Publish</button>
+                                                                        <button onClick={() => handleRejectAssets(sec.id)} className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 rounded-xl font-bold text-xs cursor-pointer">REJECT</button>
                                                                     </>
                                                                 )}
 
