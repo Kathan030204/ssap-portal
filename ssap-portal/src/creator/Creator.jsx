@@ -391,8 +391,9 @@ export function Creator({ onLogout }) {
                     <input
                       type="url"
                       value={formData.live_link}
+                      disabled={isEditing}
                       onChange={(e) => setFormData({ ...formData, live_link: e.target.value })}
-                      className="w-full border-2 border-slate-50 bg-slate-50 rounded-2xl p-5 text-sm font-bold outline-none focus:border-indigo-500"
+                      className="w-full border-2 border-slate-50 bg-slate-50 rounded-2xl p-5 text-sm font-bold outline-none focus:border-indigo-500 disabled:opacity-70"
                       placeholder="https://example.com/live"
                     />
                   </div>
@@ -401,8 +402,9 @@ export function Creator({ onLogout }) {
                     <input
                       type="url"
                       value={formData.shopify_admin_link}
+                      disabled={isEditing}
                       onChange={(e) => setFormData({ ...formData, shopify_admin_link: e.target.value })}
-                      className="w-full border-2 border-slate-50 bg-slate-50 rounded-2xl p-5 text-sm font-bold outline-none focus:border-indigo-500"
+                      className="w-full border-2 border-slate-50 bg-slate-50 rounded-2xl p-5 text-sm font-bold outline-none focus:border-indigo-500 disabled:opacity-70"
                       placeholder="https://admin.shopify.com/..."
                     />
                   </div>
