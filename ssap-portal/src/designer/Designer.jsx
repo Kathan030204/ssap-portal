@@ -422,7 +422,6 @@ export function Designer({ onLogout }) {
           <header className="flex justify-between items-start mb-10">
             <div>
               <div className="text-4xl font-black text-slate-900 tracking-tight italic">Studio Pipeline</div>
-              <div className='border-3 rounded-full border-indigo-400 mt-2 w-25'></div>
             </div>
             <div className="relative" ref={notifRef}>
               <button onClick={() => setShowNotifDropdown(!showNotifDropdown)} className={`p-4  cursor-pointer rounded-2xl bg-white border border-slate-200 text-slate-400 transition-all relative ${notifications.length > 0 ? 'shadow-xl border-indigo-100' : ''}`}>
