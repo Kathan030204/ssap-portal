@@ -117,8 +117,8 @@ export function Admin({ onLogout }) {
                 api.get('/accounts'),
                 api.get('/sections'),
             ]);
-            
-            
+
+
             // Sort Sections by ID Descending
             const sortedSections = secRes.data.sort((a, b) => b.id - a.id);
 
@@ -526,19 +526,77 @@ export function Admin({ onLogout }) {
                                                 .map(sec => (
                                                     <tr key={sec.id} className="hover:bg-slate-50 transition-colors">
                                                         <td className="px-6 py-4 text-xs font-mono text-slate-400 uppercase">SEC-{sec.id}</td>
-                                                        <td className="px-6 py-4 font-bold">{sec.title}</td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="font-bold text-slate-800">{sec.title}</div>
+                                                            {/* Display Current Owner Context */}
+                                                            <div className="flex gap-2 mt-1">
+                                                                {sec.tester_id && (
+                                                                    <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold uppercase">
+                                                                        QA: {accounts.find(a => a.id === sec.tester_id)?.username || 'N/A'}
+                                                                    </span>
+                                                                )}
+                                                                {sec.designer_id && (
+                                                                    <span className="text-[9px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded font-bold uppercase">
+                                                                        Design: {accounts.find(a => a.id === sec.designer_id)?.username || 'N/A'}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </td>
                                                         <td className="px-6 py-4">
                                                             <StatusBadge status={sec.current_status} />
                                                         </td>
-                                                        <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                                            {sec.current_status === 'Ready for Store' && (
-                                                                <>
-                                                                    <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="flex items-center gap-2 bg-emerald-600 text-white tracking-wider px-3 py-2 rounded-xl font-black text-xs cursor-pointer">Publish</button>
-                                                                    <button onClick={() => handleRejectAssets(sec.id)} className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 tracking-tight rounded-xl font-black text-xs cursor-pointer">REJECT ASSETS</button>
-                                                                </>
-                                                            )}
-                                                            <button onClick={() => openAssetsViewer(sec)} className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-indigo-100 transition-all cursor-pointer"><FaEye /> VIEW ASSETS</button>
-                                                            <button onClick={() => handleDownload(sec.id, sec.title)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl cursor-pointer"><FaDownload /></button>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className="flex justify-end items-center gap-3">
+
+                                                                {/* REASSIGN TESTER (Visible when In Testing) */}
+                                                                {sec.current_status === 'In Testing' && (
+                                                                    <div className="flex items-center gap-2 bg-amber-50/50 p-1.5 rounded-xl border border-amber-100">
+                                                                        <select
+                                                                            onChange={(e) => setSelectedTesters({ ...selectedTesters, [sec.id]: e.target.value })}
+                                                                            className="bg-transparent text-[10px] font-black uppercase outline-none cursor-pointer text-amber-700"
+                                                                            defaultValue=""
+                                                                        >
+                                                                            <option value="" disabled>Reassign QA...</option>
+                                                                            {testers.map(t => (
+                                                                                <option key={t.id} value={t.id}>{t.username} ({getWorkload(t.id)})</option>
+                                                                            ))}
+                                                                        </select>
+                                                                        <button onClick={() => handleAssignTester(sec.id, selectedTesters[sec.id])} disabled={!selectedTesters[sec.id]} className={`p-1.5 rounded-lg ${selectedTesters[sec.id] ? 'text-amber-600 hover:bg-amber-100' : 'text-slate-300'}`}>
+                                                                            <FaCheck size={10} />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* REASSIGN DESIGNER (Visible when In Design or Pending Admin Review) */}
+                                                                {(sec.current_status === 'In Design' || sec.current_status === 'Pending Admin') && (
+                                                                    <div className="flex items-center gap-2 bg-indigo-50/50 p-1.5 rounded-xl border border-indigo-100">
+                                                                        <select
+                                                                            onChange={(e) => setSelectedDesigners({ ...selectedDesigners, [sec.id]: e.target.value })}
+                                                                            className="bg-transparent text-[10px] font-black uppercase outline-none cursor-pointer text-indigo-700"
+                                                                            defaultValue=""
+                                                                        >
+                                                                            <option value="" disabled>Reassign Design...</option>
+                                                                            {designers.map(d => (
+                                                                                <option key={d.id} value={d.id}>{d.username} ({getDesignerWorkload(d.id)})</option>
+                                                                            ))}
+                                                                        </select>
+                                                                        <button onClick={() => handleAssignDesigner(sec.id, selectedDesigners[sec.id])} disabled={!selectedDesigners[sec.id]} className={`p-1.5 rounded-lg ${selectedDesigners[sec.id] ? 'text-indigo-600 hover:bg-indigo-100' : 'text-slate-300'}`}>
+                                                                            <FaCheck size={10} />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Standard Actions */}
+                                                                {sec.current_status === 'Ready for Store' && (
+                                                                    <>
+                                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-3 py-2 rounded-xl font-black text-xs">Publish</button>
+                                                                        <button onClick={() => handleRejectAssets(sec.id)} className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 tracking-tight rounded-xl font-black text-xs cursor-pointer">REJECT</button>
+                                                                    </>
+                                                                )}
+
+                                                                <button onClick={() => openAssetsViewer(sec)} className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="View Assets"><FaEye /></button>
+                                                                <button onClick={() => handleDownload(sec.id, sec.title)} className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl" title="Download ZIP"><FaDownload /></button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -661,7 +719,7 @@ export function Admin({ onLogout }) {
                                     {sectionDesigns.map((design) => (
                                         <div key={design.id} className="group bg-white p-4 rounded-4xl shadow-sm border border-slate-200 hover:shadow-xl transition-all">
                                             <div className="rounded-3xl overflow-hidden bg-slate-200 relative aspect-square flex items-center justify-center">
-                                                <img src={design.image_url} alt={design.image_type} className="max-w-full max-h-full object-contain"/>
+                                                <img src={design.image_url} alt={design.image_type} className="max-w-full max-h-full object-contain" />
                                             </div>
                                             <div className="mt-6 flex justify-between items-center px-2">
                                                 <div>
