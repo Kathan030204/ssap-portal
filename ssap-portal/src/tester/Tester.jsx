@@ -305,8 +305,8 @@ export function Tester({ onLogout }) {
           <div className="mb-4 flex items-center gap-3">
             <FaUserCircle className="text-slate-500" size={30} />
             <div className="overflow-hidden">
-              <p className="truncate text-xs font-black text-white">{currentUser.name}</p>
-              <p className="text-[10px] uppercase text-slate-500">{currentUser.role}</p>
+              <p className="text-base font-bold tracking-wider text-white">{currentUser.name}</p>
+              <p className="text-sm uppercase text-slate-500">{currentUser.role}</p>
             </div>
           </div>
           <button onClick={onLogout} className="w-full rounded-xl bg-rose-500/10 py-3 text-[10px] font-black uppercase text-rose-500 transition-all hover:bg-rose-500 hover:text-white cursor-pointer">Logout</button>

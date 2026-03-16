@@ -382,11 +382,11 @@ export function Admin({ onLogout }) {
                             <FaUserCircle size={20} />
                         </div>
                         <div className="flex flex-col overflow-hidden">
-                            <span className="font-black text-sm truncate uppercase tracking-wider">{adminUser.username}</span>
-                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{adminUser.role}</span>
+                            <span className="font-bold text-base tracking-wider">{adminUser.username}</span>
+                            <span className="text-sm text-slate-500 font-bold uppercase tracking-tighter">{adminUser.role}</span>
                         </div>
                     </div>
-                    <button onClick={handleLogout} className="w-full test-center gap-3 px-4 py-3 rounded-xl font-black text-xs text-rose-400 hover:bg-rose-500/10 transition-all border border-transparent hover:border-rose-500/20 uppercase tracking-widest cursor-pointer">
+                    <button onClick={handleLogout} className="w-full test-center gap-3 px-4 py-3 rounded-xl font-bold text-xs text-rose-400 hover:bg-rose-500/10 transition-all border border-transparent hover:border-rose-500/20 uppercase tracking-widest cursor-pointer">
                         LOGOUT SESSION
                     </button>
                 </div>
@@ -772,7 +772,7 @@ export function Admin({ onLogout }) {
                                     <option value="admin">Super Admin</option>
                                 </select>
                             </div>
-                            <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-200 mt-4 uppercase tracking-widest cursor-pointer">{isEditMode ? "Save Changes" : "Authorize User"}</button>
+                            <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-200 mt-4 uppercase tracking-widest cursor-pointer">{isEditMode ? "Save Changes" : "Authorize User"}</button>
                         </form>
                     </div>
                 </div>

@@ -206,11 +206,11 @@ export function Creator({ onLogout }) {
           <div className="flex items-center gap-3 px-2 mb-4">
             <div className="w-9 h-9 rounded-full bg-indigo-500 flex items-center justify-center text-white font-black text-xs"><FaUserCircle size={20} /></div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium uppercase text-white">{user.name}</p>
-              <p className="text-sm font-bold text-slate-500 uppercase">{user.role}</p>
+              <span className="text-lg font-medium text-white">{user.name}</span>
+              <p className="text-xs font-bold text-slate-500 uppercase">{user.role}</p>
             </div>
           </div>
-          <button onClick={onLogout} className="w-full text-center justify-center gap-2 py-2 text-base font-black uppercase tracking-widest text-slate-500 hover:text-rose-400 cursor-pointer">
+          <button onClick={onLogout} className="w-full text-center justify-center gap-2 py-2 text-base font-bold uppercase tracking-widest text-slate-500 hover:text-rose-400 cursor-pointer">
             Sign Out
           </button>
         </div>

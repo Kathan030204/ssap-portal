@@ -406,11 +406,11 @@ export function Designer({ onLogout }) {
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
             <FaUserCircle size={20} className="text-indigo-400" />
             <div className="overflow-hidden">
-              <p className="font-black text-sm truncate w-32 uppercase">{currentUser.name}</p>
-              <p className="text-slate-500 text-[9px] uppercase font-bold tracking-widest">{currentUser.role}</p>
+              <p className="font-bold text-base w-32 tracking-wider">{currentUser.name}</p>
+              <p className="text-slate-500 text-xs uppercase font-bold tracking-widest">{currentUser.role}</p>
             </div>
           </div>
-          <button onClick={() => { sessionStorage.clear(); onLogout(); }} className="w-full cursor-pointertext-center gap-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-rose-400 font-black text-xs uppercase tracking-widest">
+          <button onClick={() => { sessionStorage.clear(); onLogout(); }} className="w-full cursor-pointer text-center gap-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-rose-400 font-bold text-xs uppercase tracking-widest">
             Sign Out
           </button>
         </div>
