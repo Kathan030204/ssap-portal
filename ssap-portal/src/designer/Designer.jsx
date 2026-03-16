@@ -434,7 +434,7 @@ export function Designer({ onLogout }) {
                   <h4 className="font-black text-[10px] uppercase text-slate-400 mb-4">Urgent Actions</h4>
                   <div className="space-y-3 max-h-64 overflow-y-auto">
                     {notifications.map(n => (
-                      <div key={n.id} onClick={() => handleNotifClick(n.id, n.status)} className={`p-4 rounded-2xl border cursor-pointer ${n.status === 'Rejected by Admin' ? 'bg-rose-50 border-rose-100' : 'bg-indigo-50 border-indigo-100'}`}>
+                      <div key={n.id} onClick={() => handleNotifClick(n.id, n.status)} className={`p-4 rounded-2xl font-normal border cursor-pointer ${n.status === 'Rejected by Admin' ? 'bg-rose-50 border-rose-100' : 'bg-indigo-50 border-indigo-100'}`}>
                         <p className="text-xs font-black text-slate-900">{n.title}</p>
                         <p className="text-[10px] font-bold mt-1 uppercase italic text-slate-500">{n.msg}</p>
                       </div>
@@ -524,7 +524,7 @@ export function Designer({ onLogout }) {
                           <FaPlus size={14} />
                         </button>
                       )}
-                      {(section.current_status === 'Ready for Store' || section.current_status === 'Published') && (
+                      {(section.current_status === 'Ready for Store' || section.current_status === 'Published' || section.current_status === 'Rejected by Admin') && (
                         <button onClick={(e) => { e.stopPropagation(); handleViewAssets(section); }} className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm cursor-pointer">
                           <FaEye size={14} /> View
                         </button>
