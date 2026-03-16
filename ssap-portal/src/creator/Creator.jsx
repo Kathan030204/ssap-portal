@@ -277,9 +277,9 @@ export function Creator({ onLogout }) {
                         </td>
                         <td className="px-6 py-5 text-center">
                           <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border flex items-center justify-center gap-1 w-max mx-auto ${sec.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                              sec.current_status === 'Pending Allocation' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                sec.current_status === 'In Testing' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                                  'bg-slate-100 text-slate-500'
+                            sec.current_status === 'Pending Allocation' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                              sec.current_status === 'In Testing' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                'bg-slate-100 text-slate-500'
                             }`}>
                             {sec.current_status}
                           </span>
@@ -339,8 +339,8 @@ export function Creator({ onLogout }) {
                           {selectedIssue.issues?.map((bug, index) => (
                             <div key={index} className="p-5 bg-rose-50 rounded-2xl border border-rose-100 relative overflow-hidden">
                               <div className="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
-                              <p className="text-sm italic font-medium text-slate-700 leading-relaxed">
-                                "{bug.description || bug.notes || 'No description provided.'}"
+                              <p className="text-base font-medium text-slate-700 leading-relaxed">
+                                {bug.description || 'No description provided.'}
                               </p>
                             </div>
                           ))}
