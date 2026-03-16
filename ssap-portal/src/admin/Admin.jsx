@@ -4,10 +4,8 @@ import {
     FaRocket, FaFolderOpen, FaCheckDouble, FaUsers, FaHome,
     FaHourglassHalf, FaPlus, FaTimes, FaTrash, FaCheck,
     FaDownload, FaSpinner, FaUndo,
-    FaDesktop,
-    FaMobileAlt,
-    FaChartLine, FaTrophy, FaClock,
-    FaSignOutAlt, FaUserShield, FaEye, FaRegImage, FaUserCircle, FaSearch,
+    FaChartLine, FaClock,
+    FaUserShield, FaEye, FaRegImage, FaUserCircle, FaSearch,
     FaEdit, FaExclamationTriangle, FaCheckCircle,
     FaPalette
 } from 'react-icons/fa';
