@@ -30,7 +30,7 @@ const NotificationModal = ({ message, type, onClose }) => {
                     <p className="text-slate-500 font-bold text-sm leading-relaxed">{message}</p>
                     <button
                         onClick={onClose}
-                        className={`mt-6 w-full py-3 rounded-xl font-black text-white transition-all shadow-lg ${isError ? 'bg-rose-500 shadow-rose-100 hover:bg-rose-600' : 'bg-slate-900 shadow-slate-200 hover:bg-slate-800'}`}
+                        className={`mt-6 w-full py-3 rounded-xl font-black text-white transition-all shadow-lg cursor-pointer ${isError ? 'bg-rose-500 shadow-rose-100 hover:bg-rose-600' : 'bg-slate-900 shadow-slate-200 hover:bg-slate-800'}`}
                     >
                         OK!
                     </button>
@@ -53,8 +53,8 @@ const ConfirmationModal = ({ isOpen, title, message, onConfirm, onCancel, confir
                     <h3 className="text-xl font-black text-slate-800 mb-2">{title}</h3>
                     <p className="text-slate-500 font-bold text-sm leading-relaxed">{message}</p>
                     <div className="flex gap-3 mt-8">
-                        <button onClick={onCancel} className="flex-1 py-3 rounded-xl font-black text-slate-400 hover:bg-slate-50 transition-all uppercase text-xs">Cancel</button>
-                        <button onClick={onConfirm} className="flex-1 py-3 rounded-xl font-black text-white bg-slate-900 hover:bg-blue-600 transition-all shadow-lg uppercase text-xs">
+                        <button onClick={onCancel} className="flex-1 py-3 rounded-xl font-black text-slate-400 hover:bg-slate-50 transition-all uppercase text-xs cursor-pointer">Cancel</button>
+                        <button onClick={onConfirm} className="flex-1 py-3 rounded-xl font-black text-white bg-slate-900 hover:bg-blue-600 transition-all shadow-lg uppercase text-xs cursor-pointer">
                             {confirmText}
                         </button>
                     </div>
@@ -371,7 +371,7 @@ export function Admin({ onLogout }) {
                         { id: 'users', label: 'Permissions', icon: <FaUsers /> },
                     ].map(item => (
                         <button key={item.id} onClick={() => setActiveTab(item.id)}
-                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === item.id ? 'bg-blue-600 shadow-lg text-white' : 'hover:bg-slate-800 text-slate-400'}`}>
+                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all cursor-pointer ${activeTab === item.id ? 'bg-blue-600 shadow-lg text-white' : 'hover:bg-slate-800 text-slate-400'}`}>
                             {item.icon} {item.label}
                         </button>
                     ))}
@@ -386,7 +386,7 @@ export function Admin({ onLogout }) {
                             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{adminUser.role}</span>
                         </div>
                     </div>
-                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-black text-xs text-rose-400 hover:bg-rose-500/10 transition-all border border-transparent hover:border-rose-500/20 uppercase tracking-widest">
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-black text-xs text-rose-400 hover:bg-rose-500/10 transition-all border border-transparent hover:border-rose-500/20 uppercase tracking-widest cursor-pointer">
                         <FaSignOutAlt /> LOGOUT SESSION
                     </button>
                 </div>
@@ -437,7 +437,7 @@ export function Admin({ onLogout }) {
                                                             <button
                                                                 onClick={() => handleAssignTester(sec.id, selectedTesters[sec.id])}
                                                                 disabled={!selectedTesters[sec.id]}
-                                                                className={`px-4 py-2 font-extrabold rounded-xl transition-all ${selectedTesters[sec.id] ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg cursor-pointer" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}
+                                                                className={`px-4 py-2 font-extrabold rounded-xl transition-all cursor-pointer ${selectedTesters[sec.id] ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}
                                                             >
                                                                 Assign to Tester
                                                             </button>
@@ -475,7 +475,7 @@ export function Admin({ onLogout }) {
                                                         <button
                                                             onClick={() => handleAssignDesigner(sec.id, selectedDesigners[sec.id])}
                                                             disabled={!selectedDesigners[sec.id]}
-                                                            className={`px-4 py-2 font-extrabold rounded-xl transition-all ${selectedDesigners[sec.id] ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg cursor-pointer" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}
+                                                            className={`px-4 py-2 font-extrabold rounded-xl transition-all cursor-pointer ${selectedDesigners[sec.id] ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}
                                                         >
                                                             Assign to Designer
                                                         </button>
@@ -496,7 +496,7 @@ export function Admin({ onLogout }) {
                                         <div className="relative flex items-center">
                                             <FaSearch className="absolute left-4 text-slate-400 text-sm" />
                                             <input type="text" placeholder="Search assets..." value={repoSearch} onChange={(e) => setRepoSearch(e.target.value)}
-                                                className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 w-64 shadow-sm" />
+                                                className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 w-64 shadow-sm cursor-pointer" />
                                         </div>
                                         <select className="bg-white border border-slate-200 px-4 py-2 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 shadow-sm cursor-pointer"
                                             value={repoFilter} onChange={(e) => setRepoFilter(e.target.value)}>
@@ -561,7 +561,7 @@ export function Admin({ onLogout }) {
                                                                                 <option key={t.id} value={t.id}>{t.username} ({getWorkload(t.id)})</option>
                                                                             ))}
                                                                         </select>
-                                                                        <button onClick={() => handleAssignTester(sec.id, selectedTesters[sec.id])} disabled={!selectedTesters[sec.id]} className={`p-1.5 rounded-lg ${selectedTesters[sec.id] ? 'text-amber-600 hover:bg-amber-100' : 'text-slate-300'}`}>
+                                                                        <button onClick={() => handleAssignTester(sec.id, selectedTesters[sec.id])} disabled={!selectedTesters[sec.id]} className={`p-1.5 rounded-lg cursor-pointer ${selectedTesters[sec.id] ? 'text-amber-600 hover:bg-amber-100' : 'text-slate-300'}`}>
                                                                             <FaCheck size={10} />
                                                                         </button>
                                                                     </div>
@@ -580,7 +580,7 @@ export function Admin({ onLogout }) {
                                                                                 <option key={d.id} value={d.id}>{d.username} ({getDesignerWorkload(d.id)})</option>
                                                                             ))}
                                                                         </select>
-                                                                        <button onClick={() => handleAssignDesigner(sec.id, selectedDesigners[sec.id])} disabled={!selectedDesigners[sec.id]} className={`p-1.5 rounded-lg ${selectedDesigners[sec.id] ? 'text-indigo-600 hover:bg-indigo-100' : 'text-slate-300'}`}>
+                                                                        <button onClick={() => handleAssignDesigner(sec.id, selectedDesigners[sec.id])} disabled={!selectedDesigners[sec.id]} className={`p-1.5 rounded-lg cursor-pointer ${selectedDesigners[sec.id] ? 'text-indigo-600 hover:bg-indigo-100' : 'text-slate-300'}`}>
                                                                             <FaCheck size={10} />
                                                                         </button>
                                                                     </div>
@@ -589,13 +589,13 @@ export function Admin({ onLogout }) {
                                                                 {/* Standard Actions */}
                                                                 {sec.current_status === 'Ready for Store' && (
                                                                     <>
-                                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-3 py-2 rounded-xl font-black text-xs">Publish</button>
+                                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-3 py-2 rounded-xl font-black text-xs cursor-pointer">Publish</button>
                                                                         <button onClick={() => handleRejectAssets(sec.id)} className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 tracking-tight rounded-xl font-black text-xs cursor-pointer">REJECT</button>
                                                                     </>
                                                                 )}
 
-                                                                <button onClick={() => openAssetsViewer(sec)} className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="View Assets"><FaEye /></button>
-                                                                <button onClick={() => handleDownload(sec.id, sec.title)} className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl" title="Download ZIP"><FaDownload /></button>
+                                                                <button onClick={() => openAssetsViewer(sec)} className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer" title="View Assets"><FaEye /></button>
+                                                                <button onClick={() => handleDownload(sec.id, sec.title)} className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl cursor-pointer" title="Download ZIP"><FaDownload /></button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -614,7 +614,7 @@ export function Admin({ onLogout }) {
                                         <div className="relative flex items-center">
                                             <FaSearch className="absolute left-4 text-slate-400 text-sm" />
                                             <input type="text" placeholder="Search by title..." value={approvalSearch} onChange={(e) => setApprovalSearch(e.target.value)}
-                                                className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 w-64 shadow-sm" />
+                                                className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 w-64 shadow-sm cursor-pointer" />
                                         </div>
                                         <select className="bg-white border border-slate-200 px-4 py-2 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 shadow-sm cursor-pointer"
                                             value={approvalFilter} onChange={(e) => setApprovalFilter(e.target.value)}>
@@ -638,11 +638,11 @@ export function Admin({ onLogout }) {
                                                 </div>
                                                 <div className="flex gap-3">
                                                     {sec.current_status === 'Published' ? (
-                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Issue Logged')} className="bg-rose-100 text-rose-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-rose-200 transition-colors"><FaUndo /> Emergency Rollback</button>
+                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Issue Logged')} className="bg-rose-100 text-rose-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-rose-200 transition-colors cursor-pointer"><FaUndo /> Emergency Rollback</button>
                                                     ) : sec.current_status === 'Issue Logged' ? (
                                                         <span className="bg-rose-50 text-rose-500 px-4 py-2 rounded-xl font-black text-xs border border-rose-100 uppercase">ROLLED BACK</span>
                                                     ) : (
-                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black flex items-center gap-2 hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all"><FaRocket /> Publish to Store</button>
+                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black flex items-center gap-2 hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all cursor-pointer"><FaRocket /> Publish to Store</button>
                                                     )}
                                                 </div>
                                             </div>
@@ -656,7 +656,7 @@ export function Admin({ onLogout }) {
                             <div className="space-y-6">
                                 <div className="flex justify-between items-center">
                                     <h2 className="text-3xl font-black">User & Role Permissions</h2>
-                                    <button onClick={openCreateModal} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2"><FaPlus /> Create Member</button>
+                                    <button onClick={openCreateModal} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 cursor-pointer"><FaPlus /> Create Member</button>
                                 </div>
                                 <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
                                     <table className="w-full text-left">
@@ -675,8 +675,8 @@ export function Admin({ onLogout }) {
                                                     <td className="px-6 py-4 font-black">{acc.username}<br /><span className="text-slate-400 font-medium">{acc.email}</span></td>
                                                     <td className="px-6 py-4 font-black text-[10px] text-indigo-600 uppercase">{acc.role}</td>
                                                     <td className="px-6 py-4 text-right flex justify-end gap-10">
-                                                        <button onClick={() => openEditModal(acc)} className="text-blue-500 hover:text-blue-700 transition-colors" title="Edit User Role"><FaEdit size={18} /></button>
-                                                        <button onClick={() => handleDeleteAccount(acc.id)} className="text-rose-400 hover:text-rose-600 transition-colors" title="Delete User"><FaTrash size={16} /></button>
+                                                        <button onClick={() => openEditModal(acc)} className="text-blue-500 hover:text-blue-700 transition-colors cursor-pointer" title="Edit User Role"><FaEdit size={18} /></button>
+                                                        <button onClick={() => handleDeleteAccount(acc.id)} className="text-rose-400 hover:text-rose-600 transition-colors cursor-pointer" title="Delete User"><FaTrash size={16} /></button>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -700,10 +700,10 @@ export function Admin({ onLogout }) {
                                     <p className="text-xs font-black text-blue-600 uppercase tracking-widest">Design Proofs & Creative Assets</p>
                                     <div className="flex gap-3">
                                         {selectedSection.live_link && (
-                                            <a href={selectedSection.live_link} target="_blank" rel="noreferrer" className="text-[10px] font-bold bg-slate-900 text-white px-3 py-1 rounded-full flex items-center gap-1.5 hover:bg-blue-600 transition-colors"> LIVE PREVIEW</a>
+                                            <a href={selectedSection.live_link} target="_blank" rel="noreferrer" className="text-[10px] font-bold bg-slate-900 text-white px-3 py-1 rounded-full flex items-center gap-1.5 hover:bg-blue-600 transition-colors cursor-pointer"> LIVE PREVIEW</a>
                                         )}
                                         {selectedSection.shopify_admin_link && (
-                                            <a href={selectedSection.shopify_admin_link} target="_blank" rel="noreferrer" className="text-[10px] font-bold bg-[#95BF47] text-white px-3 py-1 rounded-full flex items-center gap-1.5 hover:opacity-90 transition-opacity">SHOPIFY ADMIN</a>
+                                            <a href={selectedSection.shopify_admin_link} target="_blank" rel="noreferrer" className="text-[10px] font-bold bg-[#95BF47] text-white px-3 py-1 rounded-full flex items-center gap-1.5 hover:opacity-90 transition-opacity cursor-pointer">SHOPIFY ADMIN</a>
                                         )}
                                     </div>
                                 </div>
@@ -726,7 +726,7 @@ export function Admin({ onLogout }) {
                                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{design.image_type}</p>
                                                     <p className="font-bold text-slate-700">Design #{design.id}</p>
                                                 </div>
-                                                <button onClick={() => downloadDesignImage(design.id)} className="bg-slate-900 text-white p-3 rounded-2xl hover:bg-blue-600 transition-all shadow-lg"><FaDownload /></button>
+                                                <button onClick={() => downloadDesignImage(design.id)} className="bg-slate-900 text-white p-3 rounded-2xl hover:bg-blue-600 transition-all shadow-lg cursor-pointer"><FaDownload /></button>
                                             </div>
                                         </div>
                                     ))}
@@ -748,7 +748,7 @@ export function Admin({ onLogout }) {
                     <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
                         <div className="p-6 border-b flex justify-between items-center bg-slate-50">
                             <h3 className="text-xl font-black italic text-slate-800">{isEditMode ? `Edit Profile: ${formData.username}` : "New Member Access"}</h3>
-                            <button onClick={() => { setIsModalOpen(false); setIsEditMode(false); }} className="text-slate-400 hover:text-slate-600"><FaTimes /></button>
+                            <button onClick={() => { setIsModalOpen(false); setIsEditMode(false); }} className="text-slate-400 hover:text-slate-600 cursor-pointer"><FaTimes /></button>
                         </div>
                         <form onSubmit={handleSubmitAccount} className="p-8 space-y-4">
                             <div className="space-y-1">
@@ -772,7 +772,7 @@ export function Admin({ onLogout }) {
                                     <option value="admin">Super Admin</option>
                                 </select>
                             </div>
-                            <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-200 mt-4 uppercase tracking-widest">{isEditMode ? "Save Changes" : "Authorize User"}</button>
+                            <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-200 mt-4 uppercase tracking-widest cursor-pointer">{isEditMode ? "Save Changes" : "Authorize User"}</button>
                         </form>
                     </div>
                 </div>

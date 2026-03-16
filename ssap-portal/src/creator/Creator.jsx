@@ -178,7 +178,7 @@ export function Creator({ onLogout }) {
         <nav className="flex-1 p-4 space-y-2 mt-4">
           <button
             onClick={() => { setActiveTab('inventory'); setStatusFilter('All'); setSelectedIssue(null); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'inventory' && statusFilter === 'All' ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-500'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all cursor-pointer ${activeTab === 'inventory' && statusFilter === 'All' ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-500'}`}
           >
             <FaHome size={18} /> Dashboard
           </button>
@@ -188,7 +188,7 @@ export function Creator({ onLogout }) {
             <button
               key={f}
               onClick={() => { setActiveTab('inventory'); setStatusFilter(f); setSelectedIssue(null); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${statusFilter === f && activeTab === 'inventory' ? 'bg-slate-800 text-indigo-400' : 'hover:bg-slate-800 text-slate-500'}`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all cursor-pointer ${statusFilter === f && activeTab === 'inventory' ? 'bg-slate-800 text-indigo-400' : 'hover:bg-slate-800 text-slate-500'}`}
             >
               {f === 'In Review' ? <FaFlask /> : f === 'Fix Required' ? <FaBug /> : <FaCheckCircle />} {f}
             </button>
@@ -196,7 +196,7 @@ export function Creator({ onLogout }) {
 
           <button
             onClick={() => { setActiveTab('submit'); setIsEditing(null); setSelectedIssue(null); setFormData({ title: '', category: 'Hero', docs: '', live_link: '', shopify_admin_link: '' }); }}
-            className="mt-4 w-full flex items-center gap-3 px-4 py-3 rounded-xl font-black text-xs uppercase bg-white text-slate-900 hover:bg-indigo-50 transition-all"
+            className="mt-4 w-full flex items-center gap-3 px-4 py-3 rounded-xl font-black text-xs uppercase bg-white text-slate-900 hover:bg-indigo-50 transition-all cursor-pointer"
           >
             <FaPlus /> New Asset
           </button>
@@ -210,7 +210,7 @@ export function Creator({ onLogout }) {
               <p className="text-[9px] font-bold text-slate-500 uppercase">{user.role}</p>
             </div>
           </div>
-          <button onClick={onLogout} className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-rose-400">
+          <button onClick={onLogout} className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-rose-400 cursor-pointer">
             <FaSignOutAlt size={12} /> Sign Out
           </button>
         </div>
@@ -225,7 +225,7 @@ export function Creator({ onLogout }) {
           </div>
 
           <div className="relative" ref={notifRef}>
-            <button onClick={() => setShowNotifDropdown(!showNotifDropdown)} className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 transition-all relative">
+            <button onClick={() => setShowNotifDropdown(!showNotifDropdown)} className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 transition-all relative cursor-pointer">
               <FaBell size={20} />
               {notifications.length > 0 && <span className="absolute top-3 right-3 w-4 h-4 bg-rose-500 border-2 border-white rounded-full flex items-center justify-center text-[8px] text-white font-black">{notifications.length}</span>}
             </button>
@@ -322,7 +322,7 @@ export function Creator({ onLogout }) {
                         <button
                           type="button"
                           onClick={() => setSelectedIssue(null)}
-                          className="text-slate-300 hover:text-slate-900 p-1 transition-colors"
+                          className="text-slate-300 hover:text-slate-900 p-1 transition-colors cursor-pointer"
                         >
                           <FaTimes size={18} />
                         </button>
@@ -345,7 +345,7 @@ export function Creator({ onLogout }) {
                             </div>
                           ))}
                         </div>
-                        <button onClick={() => startReupload(selectedIssue)} className="w-full py-4 bg-slate-800 text-white rounded-2xl font-black text-xs uppercase shadow-xl flex items-center justify-center gap-2 hover:bg-slate-900 transition-all">
+                        <button onClick={() => startReupload(selectedIssue)} className="w-full py-4 bg-slate-800 text-white rounded-2xl font-black text-xs uppercase shadow-xl flex items-center justify-center gap-2 hover:bg-slate-900 transition-all cursor-pointer">
                           <FaSyncAlt /> Push Fix Build
                         </button>
                       </div>
@@ -418,8 +418,8 @@ export function Creator({ onLogout }) {
                   </div>
                 </div>
                 <div className="flex justify-end gap-6 pt-4">
-                  <button type="button" onClick={() => setActiveTab('inventory')} className="text-xs font-black uppercase text-slate-400">Cancel</button>
-                  <button type="submit" disabled={submitting || !file} className="bg-slate-900 text-white px-10 py-4 rounded-xl font-black text-xs uppercase shadow-xl hover:bg-indigo-600 disabled:opacity-50">
+                  <button type="button" onClick={() => setActiveTab('inventory')} className="text-xs font-black uppercase text-slate-400 cursor-pointer">Cancel</button>
+                  <button type="submit" disabled={submitting || !file} className="bg-slate-900 text-white px-10 py-4 rounded-xl font-black text-xs uppercase shadow-xl hover:bg-indigo-600 disabled:opacity-50 cursor-pointer">
                     {submitting ? 'Transmitting...' : isEditing ? 'Push Fix' : 'Send to QA'}
                   </button>
                 </div>

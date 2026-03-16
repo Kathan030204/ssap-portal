@@ -4,7 +4,8 @@ import {
   FaPalette, FaImage, FaDesktop, FaMobileAlt,
   FaAd, FaSpinner, FaCloudUploadAlt, FaDownload,
   FaListUl, FaCheckCircle, FaLayerGroup, FaStore, FaRocket,
-  FaUserCircle, FaSignOutAlt, FaBell, FaTimes, FaExclamationTriangle, FaCheck, FaEye, FaEdit, FaTrash, FaPlus
+  FaUserCircle, FaSignOutAlt, FaBell, FaTimes, FaExclamationTriangle, 
+  FaCheck, FaEye, FaEdit, FaTrash, FaPlus, FaSearch
 } from 'react-icons/fa';
 
 const api = axios.create({ baseURL: '/api' });
@@ -21,7 +22,7 @@ function AssetViewerModal({ isOpen, assets, onClose, sectionTitle, onEditAsset, 
             <h3 className="text-xl font-black text-slate-900 italic uppercase tracking-tight">Stored Assets</h3>
             <p className="text-slate-400 text-xs font-bold uppercase">{sectionTitle}</p>
           </div>
-          <button onClick={onClose} className="p-3 bg-slate-100 hover:bg-rose-100 hover:text-rose-600 rounded-2xl transition-colors">
+          <button onClick={onClose} className="p-3 bg-slate-100 hover:bg-rose-100 hover:text-rose-600 rounded-2xl transition-colors cursor-pointer">
             <FaTimes />
           </button>
         </div>
@@ -40,19 +41,11 @@ function AssetViewerModal({ isOpen, assets, onClose, sectionTitle, onEditAsset, 
                   </div>
                   <div className="flex justify-between items-center px-1">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter truncate w-16">#ID: {asset.id}</span>
-
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => onEditAsset(asset)}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg text-[10px] font-black uppercase transition-all"
-                      >
+                      <button onClick={() => onEditAsset(asset)} className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer">
                         <FaEdit />
                       </button>
-
-                      <button
-                        onClick={() => onDeleteAsset(asset.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg text-[10px] font-black uppercase transition-all"
-                      >
+                      <button onClick={() => onDeleteAsset(asset.id)} className="flex items-center gap-1 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer">
                         <FaTrash />
                       </button>
                     </div>
@@ -67,7 +60,7 @@ function AssetViewerModal({ isOpen, assets, onClose, sectionTitle, onEditAsset, 
   );
 }
 
-// --- ALERT MODAL COMPONENT ---
+// --- ALERT MODAL ---
 function AlertModal({ isOpen, type, title, message, onClose }) {
   if (!isOpen) return null;
   const isError = type === 'error';
@@ -79,10 +72,7 @@ function AlertModal({ isOpen, type, title, message, onClose }) {
         </div>
         <h3 className="text-2xl font-black text-slate-900 mb-2 italic">{title}</h3>
         <p className="text-slate-500 font-medium mb-8 leading-relaxed">{message}</p>
-        <button
-          onClick={onClose}
-          className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-transform active:scale-95 ${isError ? 'bg-rose-600 shadow-rose-200' : 'bg-slate-900 shadow-slate-200'} text-white`}
-        >
+        <button onClick={onClose} className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-transform active:scale-95 cursor-pointer ${isError ? 'bg-rose-600 shadow-rose-200' : 'bg-slate-900 shadow-slate-200'} text-white`}>
           OK!
         </button>
       </div>
@@ -90,7 +80,7 @@ function AlertModal({ isOpen, type, title, message, onClose }) {
   );
 }
 
-// --- CONFIRMATION MODAL COMPONENT ---
+// --- CONFIRMATION MODAL ---
 function ConfirmModal({ isOpen, title, message, onConfirm, onCancel }) {
   if (!isOpen) return null;
   return (
@@ -102,23 +92,21 @@ function ConfirmModal({ isOpen, title, message, onConfirm, onCancel }) {
         <h3 className="text-2xl font-black text-slate-900 mb-2 italic">{title}</h3>
         <p className="text-slate-500 font-medium mb-8">{message}</p>
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-4 rounded-2xl font-black uppercase text-xs bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">
-            Cancel
-          </button>
-          <button onClick={onConfirm} className="flex-1 py-4 rounded-2xl font-black uppercase text-xs bg-rose-600 text-white shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all">
-            Delete
-          </button>
+          <button onClick={onCancel} className="flex-1 py-4 rounded-2xl font-black uppercase text-xs bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer">Cancel</button>
+          <button onClick={onConfirm} className="flex-1 py-4 rounded-2xl font-black uppercase text-xs bg-rose-600 text-white shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all cursor-pointer">Delete</button>
         </div>
       </div>
     </div>
   );
 }
 
+// --- MAIN DESIGNER COMPONENT ---
 export function Designer({ onLogout }) {
   const [loading, setLoading] = useState(false);
   const [sections, setSections] = useState([]);
   const [selectedSectionId, setSelectedSectionId] = useState(null);
   const [viewFilter, setViewFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState(''); // NEW SEARCH STATE
 
   const [modalConfig, setModalConfig] = useState({ isOpen: false, type: 'success', title: '', message: '' });
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, assetId: null });
@@ -161,10 +149,9 @@ export function Designer({ onLogout }) {
       if (!currentUser.id || currentUser.id === 'N/A') return;
       const response = await api.get('/sections');
       
-      // Filter by designer and then SORT BY ID DESCENDING
       const myData = response.data
         .filter(s => s.designer_id === currentUser.id)
-        .sort((a, b) => b.id - a.id); // <--- DESCENDING ORDER BY ID
+        .sort((a, b) => b.id - a.id);
 
       setSections(myData);
 
@@ -208,9 +195,7 @@ export function Designer({ onLogout }) {
     setActiveSectionForViewer(section);
 
     try {
-      const response = await api.get(`/design`, {
-        params: { section_id: section.id }
-      });
+      const response = await api.get(`/design`, { params: { section_id: section.id } });
       setCurrentAssets(response.data);
       setViewerOpen(true);
     } catch {
@@ -284,13 +269,17 @@ export function Designer({ onLogout }) {
     }
   };
 
+  // --- FILTERING LOGIC (CATEGORY + SEARCH) ---
   const displaySections = sections.filter(s => {
-    if (viewFilter === 'all') return ['In Design', 'Published', 'Rejected by Admin', 'Ready for Store'].includes(s.current_status);
-    if (viewFilter === 'passed') return s.current_status === 'In Design';
-    if (viewFilter === 'rejected') return s.current_status === 'Rejected by Admin';
-    if (viewFilter === 'ready') return s.current_status === 'Ready for Store';
-    if (viewFilter === 'published') return s.current_status === 'Published';
-    return true;
+    let matchesCategory = true;
+    if (viewFilter === 'all') matchesCategory = ['In Design', 'Published', 'Rejected by Admin', 'Ready for Store'].includes(s.current_status);
+    else if (viewFilter === 'passed') matchesCategory = s.current_status === 'In Design';
+    else if (viewFilter === 'rejected') matchesCategory = s.current_status === 'Rejected by Admin';
+    else if (viewFilter === 'ready') matchesCategory = s.current_status === 'Ready for Store';
+    else if (viewFilter === 'published') matchesCategory = s.current_status === 'Published';
+
+    const matchesSearch = s.title.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
   });
 
   const showPipeline = (viewFilter === 'passed' || viewFilter === 'rejected' || viewFilter === 'ready') && selectedSectionId !== null;
@@ -354,22 +343,17 @@ export function Designer({ onLogout }) {
     try {
       const response = await api.get(`/sections/${sectionId}/download`, { responseType: 'blob' });
       const section = sections.find(s => s.id === sectionId);
-      const originalFileName = section?.zip_url
-        ? section.zip_url.split('/').pop()
-        : `${title}.zip`;
-
+      const originalFileName = section?.zip_url ? section.zip_url.split('/').pop() : `${title}.zip`;
       const blob = new Blob([response.data], { type: response.headers['content-type'] });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', originalFileName);
-
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error(error);
+    } catch  {
       showAlert("Download failed.", 'error');
     }
   };
@@ -377,15 +361,7 @@ export function Designer({ onLogout }) {
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
       <AlertModal {...modalConfig} onClose={() => setModalConfig({ ...modalConfig, isOpen: false })} />
-
-      <ConfirmModal
-        isOpen={confirmConfig.isOpen}
-        title="Delete Asset?"
-        message="This action is permanent. Do you want to proceed?"
-        onConfirm={executeDeleteAsset}
-        onCancel={() => setConfirmConfig({ isOpen: false, assetId: null })}
-      />
-
+      <ConfirmModal isOpen={confirmConfig.isOpen} title="Delete Asset?" message="This action is permanent. Do you want to proceed?" onConfirm={executeDeleteAsset} onCancel={() => setConfirmConfig({ isOpen: false, assetId: null })} />
       <input type="file" ref={editInputRef} className="hidden" onChange={handleEditFileChange} />
 
       <AssetViewerModal
@@ -403,30 +379,30 @@ export function Designer({ onLogout }) {
           <FaPalette className="text-indigo-400" /> Designer Hub
         </div>
         <nav className="flex-1 px-4 py-6 space-y-1">
-          <button onClick={() => { setViewFilter('all'); setSelectedSectionId(null); }}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all ${viewFilter === 'all' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
+          <button onClick={() => { setViewFilter('all'); setSelectedSectionId(null); setSearchTerm(''); }}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all cursor-pointer ${viewFilter === 'all' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
             <FaListUl /> All Sections
           </button>
-          <button onClick={() => { setViewFilter('rejected'); setSelectedSectionId(null); }}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all ${viewFilter === 'rejected' ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
+          <button onClick={() => { setViewFilter('rejected'); setSelectedSectionId(null); setSearchTerm(''); }}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all cursor-pointer ${viewFilter === 'rejected' ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
             <FaExclamationTriangle /> Rejections {stats.rejected > 0 && `(${stats.rejected})`}
           </button>
-          <button onClick={() => { setViewFilter('passed'); setSelectedSectionId(null); }}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all ${viewFilter === 'passed' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
+          <button onClick={() => { setViewFilter('passed'); setSelectedSectionId(null); setSearchTerm(''); }}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all cursor-pointer ${viewFilter === 'passed' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
             <FaCheckCircle /> QA Passed
           </button>
           <div className="pt-4 mt-4 border-t border-slate-800">
-            <button onClick={() => { setViewFilter('ready'); setSelectedSectionId(null); }}
-              className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all ${viewFilter === 'ready' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
+            <button onClick={() => { setViewFilter('ready'); setSelectedSectionId(null); setSearchTerm(''); }}
+              className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all cursor-pointer ${viewFilter === 'ready' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
               <FaStore /> Ready for Store
             </button>
-            <button onClick={() => { setViewFilter('published'); setSelectedSectionId(null); }}
-              className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all ${viewFilter === 'published' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
+            <button onClick={() => { setViewFilter('published'); setSelectedSectionId(null); setSearchTerm(''); }}
+              className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all cursor-pointer ${viewFilter === 'published' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
               <FaRocket /> Published
             </button>
           </div>
         </nav>
-        <div className="p-4 border-t border-slate-800 text-white">
+        <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
             <FaUserCircle size={20} className="text-indigo-400" />
             <div className="overflow-hidden">
@@ -434,7 +410,7 @@ export function Designer({ onLogout }) {
               <p className="text-slate-500 text-[9px] uppercase font-bold tracking-widest">{currentUser.role}</p>
             </div>
           </div>
-          <button onClick={() => { sessionStorage.clear(); onLogout(); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-rose-400 font-black text-xs uppercase tracking-widest">
+          <button onClick={() => { sessionStorage.clear(); onLogout(); }} className="w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-rose-400 font-black text-xs uppercase tracking-widest">
             <FaSignOutAlt /> Sign Out
           </button>
         </div>
@@ -449,8 +425,7 @@ export function Designer({ onLogout }) {
               <p className="text-slate-500 font-medium mt-1">Active User: <span className="text-indigo-600 font-bold">{currentUser.name}</span></p>
             </div>
             <div className="relative" ref={notifRef}>
-              <button onClick={() => setShowNotifDropdown(!showNotifDropdown)}
-                className={`p-4 rounded-2xl bg-white border border-slate-200 text-slate-400 transition-all relative ${notifications.length > 0 ? 'shadow-xl border-indigo-100' : ''}`}>
+              <button onClick={() => setShowNotifDropdown(!showNotifDropdown)} className={`p-4  cursor-pointer rounded-2xl bg-white border border-slate-200 text-slate-400 transition-all relative ${notifications.length > 0 ? 'shadow-xl border-indigo-100' : ''}`}>
                 {loading ? <FaSpinner className="animate-spin" size={22} /> : <FaBell size={22} />}
                 {notifications.length > 0 && <span className="absolute top-3 right-3 w-3.5 h-3.5 bg-rose-500 border-2 border-white rounded-full"></span>}
               </button>
@@ -479,84 +454,82 @@ export function Designer({ onLogout }) {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className={`${showPipeline ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-4 transition-all duration-300`}>
-              <h1 className="text-2xl font-black mb-6 capitalize tracking-tight flex items-center gap-3">
-                <div className={`h-2 w-10 rounded-full ${viewFilter === 'rejected' ? 'bg-rose-600' : viewFilter === 'ready' ? 'bg-emerald-600' : 'bg-indigo-600'}`}></div> {viewFilter} Repository
-              </h1>
+              
+              {/* --- HEADER WITH SEARCH BAR --- */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <h1 className="text-2xl font-black capitalize tracking-tight flex items-center gap-3">
+                  <div className={`h-2 w-10 rounded-full ${viewFilter === 'rejected' ? 'bg-rose-600' : viewFilter === 'ready' ? 'bg-emerald-600' : 'bg-indigo-600'}`}></div> 
+                  {viewFilter} Repository
+                </h1>
+
+                <div className="relative group w-full md:w-80">
+                  <input
+                    type="text"
+                    placeholder="Search by section title..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-12 pr-10 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all shadow-sm"
+                  />
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+                    <FaSearch size={16} />
+                  </div>
+                  {searchTerm && (
+                    <button 
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-rose-500 transition-colors cursor-pointer"
+                    >
+                      <FaTimes size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Section List */}
               {displaySections.length === 0 ? (
-                <div className="p-20 text-center bg-white rounded-4xl border-2 border-dashed border-slate-200 text-slate-400 font-bold italic">No records found for this view.</div>
+                <div className="p-20 text-center bg-white rounded-4xl border-2 border-dashed border-slate-200 text-slate-400 font-bold italic">
+                  {searchTerm ? `No sections found matching "${searchTerm}"` : "No records found for this view."}
+                </div>
               ) : (
                 displaySections.map((section) => (
                   <div
                     key={section.id}
                     onClick={() => viewFilter !== 'ready' && (viewFilter === 'passed' || viewFilter === 'rejected') && setSelectedSectionId(section.id)}
-                    className={`p-6 rounded-3xl border-2 transition-all bg-white flex justify-between items-center ${selectedSectionId === section.id ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-lg' : 'border-transparent shadow-sm'
-                      } ${viewFilter === 'passed' || viewFilter === 'rejected' ? 'cursor-pointer hover:border-slate-300' : ''
-                      }`}
+                    className={`p-6 rounded-3xl border-2 transition-all bg-white flex justify-between items-center ${selectedSectionId === section.id ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-lg' : 'border-transparent shadow-sm'} ${viewFilter === 'passed' || viewFilter === 'rejected' ? 'cursor-pointer hover:border-slate-300' : ''}`}
                   >
                     <div className="flex gap-6 items-center flex-1">
                       <div className={`p-4 rounded-2xl shrink-0 ${selectedSectionId === section.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
                         <FaImage size={20} />
                       </div>
-
                       <div className="max-w-50">
-                        <h3 className="font-black text-slate-900 text-lg leading-tight mb-2 truncate" title={section.title}>
-                          {section.title}
-                        </h3>
+                        <h3 className="font-black text-slate-900 text-lg leading-tight mb-2 truncate" title={section.title}>{section.title}</h3>
                         <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${getStatusClasses(section.current_status)}`}>
                           {section.current_status}
                         </span>
                       </div>
-
                       <div className="flex gap-8 border-l border-slate-100 pl-8">
                         <div className="flex flex-col gap-1">
-                          <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Preview Link</span>
-                          {section.live_link ? (
-                            <a href={section.live_link} target="_blank" className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors">
-                              {section.live_link}
-                            </a>
-                          ) : (
-                            <span className="text-xs font-bold text-slate-300">N/A</span>
-                          )}
+                          <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Preview</span>
+                          {section.live_link ? <a href={section.live_link} target="_blank" className="text-xs font-bold text-indigo-600 hover:underline truncate w-32">{section.live_link}</a> : <span className="text-xs font-bold text-slate-300">N/A</span>}
                         </div>
-
                         <div className="flex flex-col gap-1">
-                          <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Admin Link</span>
-                          {section.shopify_admin_link ? (
-                            <a href={section.shopify_admin_link} target="_blank" className="text-xs font-bold text-emerald-600 hover:text-emerald-800 flex items-center gap-1 transition-colors">
-                              {section.shopify_admin_link}
-                            </a>
-                          ) : (
-                            <span className="text-xs font-bold text-slate-300">N/A</span>
-                          )}
+                          <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Admin</span>
+                          {section.shopify_admin_link ? <a href={section.shopify_admin_link} target="_blank" className="text-xs font-bold text-emerald-600 hover:underline truncate w-32">{section.shopify_admin_link}</a> : <span className="text-xs font-bold text-slate-300">N/A</span>}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex gap-3 items-center ml-4">
                       {section.current_status === 'Ready for Store' && viewFilter === 'ready' && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setSelectedSectionId(section.id); }}
-                          className="flex items-center justify-center w-10 h-10 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl transition-all shadow-md active:scale-95"
-                          title="Add Assets"
-                        >
+                        <button onClick={(e) => { e.stopPropagation(); setSelectedSectionId(section.id); }} className="flex items-center justify-center w-10 h-10 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer" title="Add Assets">
                           <FaPlus size={14} />
                         </button>
                       )}
-
                       {(section.current_status === 'Ready for Store' || section.current_status === 'Published') && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleViewAssets(section); }}
-                          className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
-                        >
+                        <button onClick={(e) => { e.stopPropagation(); handleViewAssets(section); }} className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm cursor-pointer">
                           <FaEye size={14} /> View
                         </button>
                       )}
-
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDownload(section.id, section.title) }}
-                        className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-                        title="Download ZIP"
-                      >
+                      <button onClick={(e) => { e.stopPropagation(); handleDownload(section.id, section.title) }} className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer" title="Download ZIP">
                         <FaDownload />
                       </button>
                     </div>
@@ -565,25 +538,20 @@ export function Designer({ onLogout }) {
               )}
             </div>
 
+            {/* Right Side Pipeline Panel */}
             {showPipeline && (
               <div className="lg:col-span-5 animate-in slide-in-from-right duration-300">
                 <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm sticky top-10">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-black text-xl italic flex items-center gap-2">
-                      <FaCloudUploadAlt className="text-indigo-600" /> Asset Pipeline
-                    </h3>
-                    <button onClick={() => setSelectedSectionId(null)} className="p-2 bg-slate-100 text-slate-400 hover:text-rose-500 rounded-full transition-colors">
-                      <FaTimes size={16} />
-                    </button>
+                    <h3 className="font-black text-xl italic flex items-center gap-2"><FaCloudUploadAlt className="text-indigo-600" /> Asset Pipeline</h3>
+                    <button onClick={() => setSelectedSectionId(null)} className="p-2 bg-slate-100 text-slate-400 hover:text-rose-500 rounded-full transition-colors cursor-pointer"><FaTimes size={16} /></button>
                   </div>
-
                   {selectedSection && (
                     <div className="space-y-4">
                       <div className="p-4 bg-slate-50 rounded-2xl mb-4">
                         <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Target Section</p>
                         <p className="font-bold text-slate-900 truncate">{selectedSection.title}</p>
                       </div>
-
                       {[
                         { id: 'desktop', icon: <FaDesktop />, label: 'Desktop' },
                         { id: 'mobile', icon: <FaMobileAlt />, label: 'Mobile' },
@@ -591,22 +559,20 @@ export function Designer({ onLogout }) {
                       ].map(asset => (
                         <div key={asset.id}>
                           <label className="group flex flex-col p-4 rounded-2xl border-2 border-dashed border-slate-200 hover:border-indigo-400 cursor-pointer transition-colors bg-white">
-                            <span className="text-[11px] font-black uppercase text-slate-600 flex items-center gap-2">
-                              {asset.icon} {asset.label}
-                            </span>
+                            <span className="text-[11px] font-black uppercase text-slate-600 flex items-center gap-2">{asset.icon} {asset.label}</span>
                             <input type="file" multiple className="hidden" onChange={(e) => handleFileSelect(e, asset.id)} />
                           </label>
                           <div className="flex flex-wrap gap-2 mt-2">
                             {pendingAssets[asset.id].map((file, idx) => (
                               <div key={idx} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg text-[10px] font-bold">
                                 <span className="truncate max-w-20">{file.name}</span>
-                                <button onClick={() => removeFile(asset.id, idx)} className="text-rose-400 hover:text-rose-600"><FaTimes size={10} /></button>
+                                <button onClick={() => removeFile(asset.id, idx)} className="text-rose-400 hover:text-rose-600 cursor-pointer"><FaTimes size={10} /></button>
                               </div>
                             ))}
                           </div>
                         </div>
                       ))}
-                      <button onClick={handleFinalSubmit} disabled={loading} className="w-full py-4 rounded-2xl font-black shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white uppercase text-xs transition-all active:scale-95 disabled:bg-slate-200 mt-4">
+                      <button onClick={handleFinalSubmit} disabled={loading} className="w-full py-4 rounded-2xl font-black shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white uppercase text-xs transition-all active:scale-95 disabled:bg-slate-200 mt-4 cursor-pointer">
                         {loading ? <FaSpinner className="animate-spin mx-auto text-lg" /> : 'Add to Store'}
                       </button>
                     </div>

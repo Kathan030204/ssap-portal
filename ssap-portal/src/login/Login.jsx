@@ -117,7 +117,7 @@ export function Login() {
                 key={role.id}
                 type="button"
                 onClick={() => setSelectedChip(role.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all ${selectedChip === role.id
+                className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all cursor-pointer ${selectedChip === role.id
                   ? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105'
                   : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                   }`}
@@ -144,14 +144,14 @@ export function Login() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
               >
                 {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
               </button>
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95">
+          <button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-95 cursor-pointer">
             {loading ? "Verifying..." : "Continue"} <FaArrowRight size={12} />
           </button>
           <div className="text-center">

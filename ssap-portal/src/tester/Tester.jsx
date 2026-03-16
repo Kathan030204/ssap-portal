@@ -250,7 +250,7 @@ export function Tester({ onLogout }) {
               <p className="text-[10px] uppercase text-slate-500">{currentUser.role}</p>
             </div>
           </div>
-          <button onClick={onLogout} className="w-full rounded-xl bg-rose-500/10 py-3 text-[10px] font-black uppercase text-rose-500 transition-all hover:bg-rose-500 hover:text-white">Logout</button>
+          <button onClick={onLogout} className="w-full rounded-xl bg-rose-500/10 py-3 text-[10px] font-black uppercase text-rose-500 transition-all hover:bg-rose-500 hover:text-white cursor-pointer">Logout</button>
         </div>
       </aside>
 
@@ -259,7 +259,7 @@ export function Tester({ onLogout }) {
           <h2 className="text-4xl font-black italic">Tester Dashboard</h2>
           <div className="flex items-center gap-4">
             <div className="relative" ref={notifRef}>
-              <button onClick={() => setShowNotifDropdown(!showNotifDropdown)} className="relative rounded-2xl border border-slate-200 bg-white p-4 text-slate-400 shadow-sm transition-all hover:text-purple-500">
+              <button onClick={() => setShowNotifDropdown(!showNotifDropdown)} className="relative rounded-2xl border border-slate-200 bg-white p-4 text-slate-400 shadow-sm transition-all hover:text-purple-500 cursor-pointer">
                 <FaBell size={20} />
                 {notifications.length > 0 && <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full border-2 border-white bg-rose-500"></span>}
               </button>
@@ -343,7 +343,7 @@ export function Tester({ onLogout }) {
                           ) : <span className="text-[10px] font-bold italic text-slate-300">N/A</span>}
                         </td>
                         <td className="px-8 py-6 text-right">
-                          <button onClick={(e) => { e.stopPropagation(); handleDownload(item.id, item.title); }} className="rounded-xl p-3 text-blue-600 transition-colors hover:bg-blue-50"><FaDownload /></button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDownload(item.id, item.title); }} className="rounded-xl p-3 text-blue-600 transition-colors hover:bg-blue-50 cursor-pointer"><FaDownload /></button>
                         </td>
                       </tr>
                     );
@@ -361,14 +361,14 @@ export function Tester({ onLogout }) {
                     </span>
                     <h3 className="text-3xl font-black italic">{selectedSection.title}</h3>
                   </div>
-                  <button onClick={() => setShowReviewPanel(false)} className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 transition-all hover:bg-slate-900 hover:text-white"><FaTimes /></button>
+                  <button onClick={() => setShowReviewPanel(false)} className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 transition-all hover:bg-slate-900 hover:text-white cursor-pointer"><FaTimes /></button>
                 </div>
 
                 {(editingIssueId || selectedSection.current_status === 'In Testing') && (
                   <div className={`mb-6 rounded-3xl border p-6 ${editingIssueId ? 'border-purple-200 bg-purple-50' : 'border-slate-100 bg-slate-50'}`}>
                     <div className="mb-4 grid grid-cols-3 gap-2">
                       {['Minor', 'Major', 'Critical'].map(sev => (
-                        <button key={sev} onClick={() => setIssueData({ ...issueData, severity: sev })} className={`rounded-xl border py-2 text-[10px] font-black uppercase transition-all ${issueData.severity === sev ? 'border-rose-600 bg-rose-600 text-white' : 'border-slate-100 bg-white text-slate-400'}`}>{sev}</button>
+                        <button key={sev} onClick={() => setIssueData({ ...issueData, severity: sev })} className={`rounded-xl border py-2 text-[10px] font-black uppercase transition-all ${issueData.severity === sev ? 'border-rose-600 bg-rose-600 text-white' : 'border-slate-100 bg-white text-slate-400 cursor-pointer'}`}>{sev}</button>
                       ))}
                     </div>
                     <textarea
@@ -378,8 +378,8 @@ export function Tester({ onLogout }) {
                       onChange={(e) => setIssueData({ ...issueData, desc: e.target.value })}
                     />
                     <div className="flex gap-2">
-                      {editingIssueId && <button onClick={() => { setEditingIssueId(null); setIssueData({ severity: 'Major', desc: '', isCustomType: false }) }} className="flex-1 rounded-xl bg-slate-200 py-3 text-[10px] font-black uppercase text-slate-600">Cancel</button>}
-                      <button onClick={handleAction} className="flex-2 rounded-xl bg-slate-900 py-3 text-[10px] font-black uppercase text-white">
+                      {editingIssueId && <button onClick={() => { setEditingIssueId(null); setIssueData({ severity: 'Major', desc: '', isCustomType: false }) }} className="flex-1 rounded-xl bg-slate-200 py-3 text-[10px] font-black uppercase text-slate-600 cursor-pointer">Cancel</button>}
+                      <button onClick={handleAction} className="flex-2 rounded-xl bg-slate-900 py-3 text-[10px] font-black uppercase text-white cursor-pointer">
                         {editingIssueId ? 'Update Record' : 'Add to Batch'}
                       </button>
                     </div>
@@ -394,8 +394,8 @@ export function Tester({ onLogout }) {
                         <div key={issue.id} className="flex items-center justify-between rounded-2xl border border-purple-100 bg-purple-50 p-4">
                           <span className="truncate pr-4 text-xs font-bold text-purple-900">{issue.desc}</span>
                           <div className="shrink-0 flex gap-2">
-                            <button onClick={() => startEditIssue(issue)} className="p-1 text-blue-500"><FaEdit /></button>
-                            <button onClick={() => removeIssueFromReport(issue.id)} className="p-1 text-rose-500"><FaTrashAlt /></button>
+                            <button onClick={() => startEditIssue(issue)} className="p-1 text-blue-500 cursor-pointer"><FaEdit /></button>
+                            <button onClick={() => removeIssueFromReport(issue.id)} className="p-1 text-rose-500 cursor-pointer"><FaTrashAlt /></button>
                           </div>
                         </div>
                       ))}
@@ -413,8 +413,8 @@ export function Tester({ onLogout }) {
                               <p className="text-xs font-bold leading-relaxed text-slate-700">{issue.description || issue.desc}</p>
                             </div>
                             <div className="flex flex-col gap-1">
-                              <button onClick={() => startEditIssue(issue)} className="rounded-lg p-2 text-blue-500 transition-all hover:bg-blue-50"><FaEdit size={14} /></button>
-                              <button onClick={() => deleteIssueFromDb(issue.id)} className="rounded-lg p-2 text-rose-500 transition-all hover:bg-rose-50"><FaTrashAlt size={14} /></button>
+                              <button onClick={() => startEditIssue(issue)} className="rounded-lg p-2 text-blue-500 transition-all hover:bg-blue-50 cursor-pointer"><FaEdit size={14} /></button>
+                              <button onClick={() => deleteIssueFromDb(issue.id)} className="rounded-lg p-2 text-rose-500 transition-all hover:bg-rose-50 cursor-pointer"><FaTrashAlt size={14} /></button>
                             </div>
                           </div>
                         )) : <p className="py-10 text-center text-xs italic text-slate-400">No history found</p>
@@ -425,11 +425,11 @@ export function Tester({ onLogout }) {
                   {selectedSection.current_status === 'In Testing' && (
                     <div className="space-y-3 border-t border-slate-100 pt-6">
                       {reportIssues.length > 0 ? (
-                        <button onClick={() => handleUpdateStatus(selectedSection.id, 'Issue Logged')} className="w-full rounded-3xl bg-rose-600 py-5 text-[11px] font-black uppercase italic tracking-widest text-white shadow-lg shadow-rose-200 transition-all hover:bg-rose-700">
+                        <button onClick={() => handleUpdateStatus(selectedSection.id, 'Issue Logged')} className="w-full rounded-3xl bg-rose-600 py-5 text-[11px] font-black uppercase italic tracking-widest text-white shadow-lg shadow-rose-200 transition-all hover:bg-rose-700  cursor-pointer">
                           Submit Batch ({reportIssues.length})
                         </button>
                       ) : (
-                        <button onClick={() => handleUpdateStatus(selectedSection.id, 'QA Passed')} className="w-full rounded-3xl bg-emerald-500 py-5 text-[11px] font-black uppercase italic tracking-widest text-white shadow-lg shadow-emerald-200 transition-all hover:bg-emerald-600">
+                        <button onClick={() => handleUpdateStatus(selectedSection.id, 'QA Passed')} className="w-full rounded-3xl bg-emerald-500 py-5 text-[11px] font-black uppercase italic tracking-widest text-white shadow-lg shadow-emerald-200 transition-all hover:bg-emerald-600  cursor-pointer">
                           Approve Section
                         </button>
                       )}
@@ -459,7 +459,7 @@ function StatusCard({ label, count, icon, color }) {
 
 function SidebarItem({ icon, label, active, onClick, count }) {
   return (
-    <button onClick={onClick} className={`flex w-full items-center justify-between rounded-2xl px-5 py-4 transition-all ${active ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-800/50'}`}>
+    <button onClick={onClick} className={`flex w-full items-center justify-between rounded-2xl px-5 py-4 transition-all ${active ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-800/50 cursor-pointer'}`}>
       <div className="flex items-center gap-3 text-sm font-bold uppercase tracking-tight">{icon} {label}</div>
       {count !== undefined && <span className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] font-black">{count}</span>}
     </button>
