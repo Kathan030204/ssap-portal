@@ -160,7 +160,12 @@ export function Designer({ onLogout }) {
     try {
       if (!currentUser.id || currentUser.id === 'N/A') return;
       const response = await api.get('/sections');
-      const myData = response.data.filter(s => s.designer_id === currentUser.id);
+      
+      // Filter by designer and then SORT BY ID DESCENDING
+      const myData = response.data
+        .filter(s => s.designer_id === currentUser.id)
+        .sort((a, b) => b.id - a.id); // <--- DESCENDING ORDER BY ID
+
       setSections(myData);
 
       const actionable = myData.filter(s =>
@@ -348,29 +353,19 @@ export function Designer({ onLogout }) {
   const handleDownload = async (sectionId, title) => {
     try {
       const response = await api.get(`/sections/${sectionId}/download`, { responseType: 'blob' });
-
-      // 1. Find the section to get the original filename from the stored URL
       const section = sections.find(s => s.id === sectionId);
-
-      // 2. Extract the original filename (e.g., "hero-banner-v2.png")
-      // If zip_url exists, we take the last part of the path; otherwise, fallback
       const originalFileName = section?.zip_url
         ? section.zip_url.split('/').pop()
         : `${title}.zip`;
 
-      // 3. Create the Blob using the content type from the server
       const blob = new Blob([response.data], { type: response.headers['content-type'] });
       const url = window.URL.createObjectURL(blob);
-
-      // 4. Trigger the download using the EXACT original filename
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', originalFileName); // No more .replace() or .toLowerCase()
+      link.setAttribute('download', originalFileName);
 
       document.body.appendChild(link);
       link.click();
-
-      // 5. Cleanup
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
@@ -493,19 +488,16 @@ export function Designer({ onLogout }) {
                 displaySections.map((section) => (
                   <div
                     key={section.id}
-                    // Clicking the card only triggers selection IF NOT in "Ready for Store"
                     onClick={() => viewFilter !== 'ready' && (viewFilter === 'passed' || viewFilter === 'rejected') && setSelectedSectionId(section.id)}
                     className={`p-6 rounded-3xl border-2 transition-all bg-white flex justify-between items-center ${selectedSectionId === section.id ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-lg' : 'border-transparent shadow-sm'
                       } ${viewFilter === 'passed' || viewFilter === 'rejected' ? 'cursor-pointer hover:border-slate-300' : ''
                       }`}
                   >
                     <div className="flex gap-6 items-center flex-1">
-                      {/* Icon */}
                       <div className={`p-4 rounded-2xl shrink-0 ${selectedSectionId === section.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
                         <FaImage size={20} />
                       </div>
 
-                      {/* Title & Status */}
                       <div className="max-w-50">
                         <h3 className="font-black text-slate-900 text-lg leading-tight mb-2 truncate" title={section.title}>
                           {section.title}
@@ -515,16 +507,11 @@ export function Designer({ onLogout }) {
                         </span>
                       </div>
 
-                      {/* --- NEW UPDATED LINKS DESIGN --- */}
                       <div className="flex gap-8 border-l border-slate-100 pl-8">
                         <div className="flex flex-col gap-1">
                           <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Preview Link</span>
                           {section.live_link ? (
-                            <a
-                              href={section.live_link}
-                              target="_blank"
-                              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors"
-                            >
+                            <a href={section.live_link} target="_blank" className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors">
                               {section.live_link}
                             </a>
                           ) : (
@@ -535,11 +522,7 @@ export function Designer({ onLogout }) {
                         <div className="flex flex-col gap-1">
                           <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Admin Link</span>
                           {section.shopify_admin_link ? (
-                            <a
-                              href={section.shopify_admin_link}
-                              target="_blank"
-                              className="text-xs font-bold text-emerald-600 hover:text-emerald-800 flex items-center gap-1 transition-colors"
-                            >
+                            <a href={section.shopify_admin_link} target="_blank" className="text-xs font-bold text-emerald-600 hover:text-emerald-800 flex items-center gap-1 transition-colors">
                               {section.shopify_admin_link}
                             </a>
                           ) : (
@@ -549,7 +532,6 @@ export function Designer({ onLogout }) {
                       </div>
                     </div>
 
-                    {/* Right Side Actions */}
                     <div className="flex gap-3 items-center ml-4">
                       {section.current_status === 'Ready for Store' && viewFilter === 'ready' && (
                         <button

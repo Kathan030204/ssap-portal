@@ -5,7 +5,7 @@ import {
   FaSpinner, FaLayerGroup, FaHome,
   FaClock, FaCheckDouble, FaExclamationTriangle, FaListUl,
   FaUserCircle, FaBell, FaTrashAlt,
-  FaDownload, FaEdit, FaExternalLinkAlt
+  FaDownload, FaEdit
 } from 'react-icons/fa';
 
 const api = axios.create({
@@ -57,7 +57,12 @@ export function Tester({ onLogout }) {
       setCurrentUser({ id: savedUser.id, name: savedUser.username || savedUser.name, role: savedUser.role });
 
       const secRes = await api.get('/sections');
-      const myData = secRes.data.filter(s => s.tester_id === savedUser.id);
+      
+      // --- DESCENDING SORT LOGIC ---
+      // We sort by ID descending (b.id - a.id) so newest items appear first.
+      const myData = secRes.data
+        .filter(s => s.tester_id === savedUser.id)
+        .sort((a, b) => b.id - a.id);
 
       const pending = myData.filter(s => s.current_status === 'In Testing');
       setNotifications(pending.map(p => ({ id: p.id, text: `Review needed: ${p.title}` })));
@@ -188,34 +193,20 @@ export function Tester({ onLogout }) {
   const handleDownload = async (sectionId, title) => {
     try {
       const response = await api.get(`/sections/${sectionId}/download`, { responseType: 'blob' });
-
-      // 1. Find the section to get the original filename from the stored URL
       const section = sections.find(s => s.id === sectionId);
-
-      // 2. Extract the original filename (e.g., "hero-banner-v2.png")
-      // If zip_url exists, we take the last part of the path; otherwise, fallback
-      const originalFileName = section?.zip_url
-        ? section.zip_url.split('/').pop()
-        : `${title}.zip`;
-
-      // 3. Create the Blob using the content type from the server
+      const originalFileName = section?.zip_url ? section.zip_url.split('/').pop() : `${title}.zip`;
       const blob = new Blob([response.data], { type: response.headers['content-type'] });
       const url = window.URL.createObjectURL(blob);
-
-      // 4. Trigger the download using the EXACT original filename
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', originalFileName); // No more .replace() or .toLowerCase()
-
+      link.setAttribute('download', originalFileName);
       document.body.appendChild(link);
       link.click();
-
-      // 5. Cleanup
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
-      alert("Download failed.", 'error');
+      alert("Download failed.");
     }
   };
 

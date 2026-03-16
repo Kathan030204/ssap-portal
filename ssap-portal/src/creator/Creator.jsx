@@ -30,7 +30,14 @@ export function Creator({ onLogout }) {
     if (!userId) return;
     try {
       const response = await api.get(`/sections?creator_id=${userId}`);
-      const mySections = response.data.filter(s => s.creator_id === userId);
+      
+      /** * SORTING LOGIC: 
+       * We sort the incoming data in descending order based on 'id'.
+       * This ensures the newest submissions appear at the top.
+       */
+      const sortedData = response.data.sort((a, b) => b.id - a.id);
+      
+      const mySections = sortedData.filter(s => s.creator_id === userId);
       setSections(mySections);
 
       // Handle Notifications for Issues
@@ -115,24 +122,17 @@ export function Creator({ onLogout }) {
 
     if (file) data.append('zip_file', file);
 
-    /**
-     * LOGIC: 
-     * If isEditing is present, we are fixing a bug. 
-     * We send it to 'In Testing' so it goes directly to the previous tester's queue.
-     * If not editing, it's brand new and goes to 'Pending Allocation' for the Admin.
-     */
     const nextStatus = isEditing ? 'In Testing' : 'Pending Allocation';
     data.append('current_status', nextStatus);
 
     try {
       if (isEditing) {
-        data.append('_method', 'PUT'); // For Laravel/Rails backends that require spoofing
+        data.append('_method', 'PUT'); 
         await api.post(`/sections/${isEditing}`, data);
       } else {
         await api.post('/sections', data);
       }
 
-      // Cleanup
       setFormData({ title: '', category: 'Hero', docs: '', live_link: '', shopify_admin_link: '' });
       setFile(null);
       setIsEditing(null);

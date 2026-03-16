@@ -40,7 +40,7 @@ const NotificationModal = ({ message, type, onClose }) => {
     );
 };
 
-// --- NEW CONFIRMATION MODAL COMPONENT (Replaces window.confirm) ---
+// --- NEW CONFIRMATION MODAL COMPONENT ---
 const ConfirmationModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "PROCEED" }) => {
     if (!isOpen) return null;
     return (
@@ -117,8 +117,13 @@ export function Admin({ onLogout }) {
                 api.get('/accounts'),
                 api.get('/sections'),
             ]);
+            
+            
+            // Sort Sections by ID Descending
+            const sortedSections = secRes.data.sort((a, b) => b.id - a.id);
+
             setAccounts(accRes.data);
-            setSections(secRes.data);
+            setSections(sortedSections);
         } catch (err) {
             console.error("Sync Error:", err);
         } finally {
@@ -229,15 +234,13 @@ export function Admin({ onLogout }) {
         });
     };
 
-    // --- UPDATED LOGIC: CHANGE STATUS TO 'IN TESTING' UPON ASSIGNMENT ---
-    // This stores { sectionId: testerId } pairs
     const [selectedTesters, setSelectedTesters] = React.useState({});
     const handleAssignTester = async (sectionId, testerId) => {
         if (!testerId) return;
         try {
             await api.put(`/sections/${sectionId}`, {
                 tester_id: testerId,
-                current_status: 'In Testing' // Logic updated from 'Pending Allocation' to 'In Testing'
+                current_status: 'In Testing'
             });
             showAlert("Tester assigned. Asset is now In Testing.");
             fetchInitialData();
@@ -265,7 +268,10 @@ export function Admin({ onLogout }) {
         setAssetsLoading(true);
         try {
             const response = await api.get('/design');
-            const filtered = response.data.filter(d => d.section_id === section.id);
+            // Sort design proofs descending as well
+            const filtered = response.data
+                .filter(d => d.section_id === section.id)
+                .sort((a, b) => b.id - a.id);
             setSectionDesigns(filtered);
         } catch (error) {
             console.error("Error loading assets:", error);
@@ -276,41 +282,24 @@ export function Admin({ onLogout }) {
 
     const downloadDesignImage = async (designId) => {
         try {
-            const response = await api.get(`/design/${designId}/download`, {
-                responseType: 'blob'
-            });
-
-            // 1. Create the Blob
-            const blob = new Blob([response.data], {
-                type: response.headers['content-type'] || 'image/jpeg'
-            });
+            const response = await api.get(`/design/${designId}/download`, { responseType: 'blob' });
+            const blob = new Blob([response.data], { type: response.headers['content-type'] || 'image/jpeg' });
             const url = window.URL.createObjectURL(blob);
-
-            // 2. Setup the Link
             const link = document.createElement('a');
             link.href = url;
-
-            // 3. Extract Filename
             const contentDisposition = response.headers['content-disposition'];
-            let fileName = `design_${designId}.jpg`; // Default extension helps
-
+            let fileName = `design_${designId}.jpg`;
             if (contentDisposition) {
                 const fileNameMatch = contentDisposition.match(/filename="?(.+?)"?$/);
                 if (fileNameMatch && fileNameMatch[1]) fileName = fileNameMatch[1];
             }
-
-            // --- CRITICAL ORDER CHANGE ---
-            link.setAttribute('download', fileName); // 1st: Set the name
-            document.body.appendChild(link);         // 2nd: Add to DOM
-            link.click();                            // 3rd: Click it
-            // -----------------------------
-
-            // 4. Cleanup
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
             setTimeout(() => {
                 link.remove();
                 window.URL.revokeObjectURL(url);
             }, 100);
-
         } catch (error) {
             console.error("Download failed:", error);
             alert("The original file could not be downloaded.");
@@ -320,25 +309,15 @@ export function Admin({ onLogout }) {
     const handleDownload = async (sectionId, title) => {
         try {
             const response = await api.get(`/sections/${sectionId}/download`, { responseType: 'blob' });
-
-            // 1. Find the section to get the original filename from the stored URL
             const section = sections.find(s => s.id === sectionId);
-            const originalFileName = section?.zip_url
-                ? section.zip_url.split('/').pop()
-                : `${title}.zip`;
-
+            const originalFileName = section?.zip_url ? section.zip_url.split('/').pop() : `${title}.zip`;
             const blob = new Blob([response.data], { type: response.headers['content-type'] });
             const url = window.URL.createObjectURL(blob);
-
-            // 4. Trigger the download using the EXACT original filename
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', originalFileName); // No more .replace() or .toLowerCase()
-
+            link.setAttribute('download', originalFileName);
             document.body.appendChild(link);
             link.click();
-
-            // 5. Cleanup
             link.remove();
             window.URL.revokeObjectURL(url);
         } catch (error) {
@@ -431,7 +410,6 @@ export function Admin({ onLogout }) {
                                     <StatusTile label="Total Users" val={totalUsers} icon={<FaUsers className="text-indigo-600" />} />
                                 </div>
 
-                                {/* TESTER ALLOCATION QUEUE */}
                                 <div className="grid grid-cols-1 gap-8">
                                     <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                                         <h3 className="font-black text-xl mb-6 flex items-center gap-2">
@@ -445,14 +423,9 @@ export function Admin({ onLogout }) {
                                                             <span className="font-bold">{sec.title}</span>
                                                             <span className="text-[10px] text-amber-600 font-black uppercase tracking-tight">Awaiting Assignment</span>
                                                         </div>
-
                                                         <div className="flex items-center gap-4">
-                                                            {/* STEP 1: Update state when dropdown changes */}
                                                             <select
-                                                                onChange={(e) => setSelectedTesters({
-                                                                    ...selectedTesters,
-                                                                    [sec.id]: e.target.value
-                                                                })}
+                                                                onChange={(e) => setSelectedTesters({ ...selectedTesters, [sec.id]: e.target.value })}
                                                                 className="bg-white border p-2 rounded-lg text-sm font-bold shadow-sm outline-none"
                                                                 defaultValue=""
                                                             >
@@ -463,11 +436,8 @@ export function Admin({ onLogout }) {
                                                             </select>
                                                             <button
                                                                 onClick={() => handleAssignTester(sec.id, selectedTesters[sec.id])}
-                                                                disabled={!selectedTesters[sec.id]} // Prevent clicking if no tester chosen
-                                                                className={`px-4 py-2 font-extrabold rounded-xl transition-all ${selectedTesters[sec.id]
-                                                                    ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg cursor-pointer"
-                                                                    : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                                                                    }`}
+                                                                disabled={!selectedTesters[sec.id]}
+                                                                className={`px-4 py-2 font-extrabold rounded-xl transition-all ${selectedTesters[sec.id] ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg cursor-pointer" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}
                                                             >
                                                                 Assign to Tester
                                                             </button>
@@ -479,7 +449,6 @@ export function Admin({ onLogout }) {
                                     </div>
                                 </div>
 
-                                {/* DESIGNER ALLOCATION QUEUE */}
                                 <div className="grid grid-cols-1 gap-8">
                                     <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                                         <h3 className="font-black text-xl mb-6 flex items-center gap-2">
@@ -494,37 +463,25 @@ export function Admin({ onLogout }) {
                                                             <span className="text-[10px] text-indigo-600 font-black uppercase tracking-tight">Passed by Tester</span>
                                                         </div>
                                                         <select
-                                                            onChange={(e) => setSelectedDesigners({
-                                                                ...selectedDesigners,
-                                                                [sec.id]: e.target.value
-                                                            })}
+                                                            onChange={(e) => setSelectedDesigners({ ...selectedDesigners, [sec.id]: e.target.value })}
                                                             className="bg-white border p-2 rounded-lg text-sm font-bold shadow-sm outline-none cursor-pointer hover:border-indigo-400 transition-colors"
                                                             defaultValue=""
                                                         >
                                                             <option value="" disabled>Allocate Designer...</option>
                                                             {designers.map(d => (
-                                                                <option key={d.id} value={d.id}>
-                                                                    {d.username} (Load: {getDesignerWorkload(d.id)})
-                                                                </option>
+                                                                <option key={d.id} value={d.id}>{d.username} (Load: {getDesignerWorkload(d.id)})</option>
                                                             ))}
                                                         </select>
                                                         <button
                                                             onClick={() => handleAssignDesigner(sec.id, selectedDesigners[sec.id])}
-                                                            disabled={!selectedDesigners[sec.id]} // Prevent clicking if no designer chosen
-                                                            className={`px-4 py-2 font-extrabold rounded-xl transition-all ${selectedDesigners[sec.id]
-                                                                ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg cursor-pointer"
-                                                                : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                                                                }`}
+                                                            disabled={!selectedDesigners[sec.id]}
+                                                            className={`px-4 py-2 font-extrabold rounded-xl transition-all ${selectedDesigners[sec.id] ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg cursor-pointer" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}
                                                         >
                                                             Assign to Designer
                                                         </button>
                                                     </div>
                                                 ))
-                                            ) : (
-                                                <div className="text-center py-8">
-                                                    <p className="text-slate-400 italic">No tasks awaiting design allocation.</p>
-                                                </div>
-                                            )}
+                                            ) : <div className="text-center py-8"><p className="text-slate-400 italic">No tasks awaiting design allocation.</p></div>}
                                         </div>
                                     </div>
                                 </div>
@@ -576,20 +533,12 @@ export function Admin({ onLogout }) {
                                                         <td className="px-6 py-4 text-right flex justify-end gap-2">
                                                             {sec.current_status === 'Ready for Store' && (
                                                                 <>
-                                                                    <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="flex items-center gap-2 bg-emerald-600 text-white tracking-wider px-3 py-2 rounded-xl font-black text-xs cursor-pointer">
-                                                                        Publish
-                                                                    </button>
-                                                                    <button onClick={() => handleRejectAssets(sec.id)} className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 tracking-tight rounded-xl font-black text-xs cursor-pointer">
-                                                                        REJECT ASSETS
-                                                                    </button>
+                                                                    <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="flex items-center gap-2 bg-emerald-600 text-white tracking-wider px-3 py-2 rounded-xl font-black text-xs cursor-pointer">Publish</button>
+                                                                    <button onClick={() => handleRejectAssets(sec.id)} className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 tracking-tight rounded-xl font-black text-xs cursor-pointer">REJECT ASSETS</button>
                                                                 </>
                                                             )}
-                                                            <button onClick={() => openAssetsViewer(sec)} className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-indigo-100 transition-all cursor-pointer">
-                                                                <FaEye /> VIEW ASSETS
-                                                            </button>
-                                                            <button onClick={() => handleDownload(sec.id, sec.title)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl cursor-pointer">
-                                                                <FaDownload />
-                                                            </button>
+                                                            <button onClick={() => openAssetsViewer(sec)} className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-indigo-100 transition-all cursor-pointer"><FaEye /> VIEW ASSETS</button>
+                                                            <button onClick={() => handleDownload(sec.id, sec.title)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl cursor-pointer"><FaDownload /></button>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -627,21 +576,15 @@ export function Admin({ onLogout }) {
                                             <div key={sec.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex justify-between items-center transition-all hover:shadow-md">
                                                 <div>
                                                     <h3 className="text-xl font-black">{sec.title}</h3>
-                                                    <div className="mt-1">
-                                                        <StatusBadge status={sec.current_status} />
-                                                    </div>
+                                                    <div className="mt-1"><StatusBadge status={sec.current_status} /></div>
                                                 </div>
                                                 <div className="flex gap-3">
                                                     {sec.current_status === 'Published' ? (
-                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Issue Logged')} className="bg-rose-100 text-rose-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-rose-200 transition-colors">
-                                                            <FaUndo /> Emergency Rollback
-                                                        </button>
+                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Issue Logged')} className="bg-rose-100 text-rose-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-rose-200 transition-colors"><FaUndo /> Emergency Rollback</button>
                                                     ) : sec.current_status === 'Issue Logged' ? (
                                                         <span className="bg-rose-50 text-rose-500 px-4 py-2 rounded-xl font-black text-xs border border-rose-100 uppercase">ROLLED BACK</span>
                                                     ) : (
-                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black flex items-center gap-2 hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all">
-                                                            <FaRocket /> Publish to Store
-                                                        </button>
+                                                        <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black flex items-center gap-2 hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all"><FaRocket /> Publish to Store</button>
                                                     )}
                                                 </div>
                                             </div>
@@ -674,12 +617,8 @@ export function Admin({ onLogout }) {
                                                     <td className="px-6 py-4 font-black">{acc.username}<br /><span className="text-slate-400 font-medium">{acc.email}</span></td>
                                                     <td className="px-6 py-4 font-black text-[10px] text-indigo-600 uppercase">{acc.role}</td>
                                                     <td className="px-6 py-4 text-right flex justify-end gap-10">
-                                                        <button onClick={() => openEditModal(acc)} className="text-blue-500 hover:text-blue-700 transition-colors" title="Edit User Role">
-                                                            <FaEdit size={18} />
-                                                        </button>
-                                                        <button onClick={() => handleDeleteAccount(acc.id)} className="text-rose-400 hover:text-rose-600 transition-colors" title="Delete User">
-                                                            <FaTrash size={16} />
-                                                        </button>
+                                                        <button onClick={() => openEditModal(acc)} className="text-blue-500 hover:text-blue-700 transition-colors" title="Edit User Role"><FaEdit size={18} /></button>
+                                                        <button onClick={() => handleDeleteAccount(acc.id)} className="text-rose-400 hover:text-rose-600 transition-colors" title="Delete User"><FaTrash size={16} /></button>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -696,38 +635,27 @@ export function Admin({ onLogout }) {
             {isAssetsModalOpen && selectedSection && (
                 <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-6">
                     <div className="bg-white rounded-[2.5rem] w-full max-w-6xl h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-white/20">
-
-                        {/* UPDATED HEADER WITH SECTION LINKS */}
                         <div className="p-8 border-b flex justify-between items-center bg-slate-50">
                             <div className="flex-1">
                                 <h3 className="text-3xl font-black text-slate-900">{selectedSection.title}</h3>
                                 <div className="flex items-center gap-4 mt-2">
                                     <p className="text-xs font-black text-blue-600 uppercase tracking-widest">Design Proofs & Creative Assets</p>
-
-                                    {/* SECTION SPECIFIC LINKS */}
                                     <div className="flex gap-3">
                                         {selectedSection.live_link && (
-                                            <a href={selectedSection.live_link} target="_blank" className="text-[10px] font-bold bg-slate-900 text-white px-3 py-1 rounded-full flex items-center gap-1.5 hover:bg-blue-600 transition-colors"> LIVE PREVIEW
-                                            </a>
+                                            <a href={selectedSection.live_link} target="_blank" rel="noreferrer" className="text-[10px] font-bold bg-slate-900 text-white px-3 py-1 rounded-full flex items-center gap-1.5 hover:bg-blue-600 transition-colors"> LIVE PREVIEW</a>
                                         )}
                                         {selectedSection.shopify_admin_link && (
-                                            <a href={selectedSection.shopify_admin_link} target="_blank" className="text-[10px] font-bold bg-[#95BF47] text-white px-3 py-1 rounded-full flex items-center gap-1.5 hover:opacity-90 transition-opacity">SHOPIFY ADMIN
-                                            </a>
+                                            <a href={selectedSection.shopify_admin_link} target="_blank" rel="noreferrer" className="text-[10px] font-bold bg-[#95BF47] text-white px-3 py-1 rounded-full flex items-center gap-1.5 hover:opacity-90 transition-opacity">SHOPIFY ADMIN</a>
                                         )}
                                     </div>
                                 </div>
                             </div>
-
-                            <button onClick={() => setIsAssetsModalOpen(false)} className="ml-4 bg-white border p-4 rounded-full hover:bg-rose-50 transition-all text-slate-400 hover:text-rose-600">
-                                <FaTimes />
-                            </button>
+                            <button onClick={() => setIsAssetsModalOpen(false)} className="ml-4 bg-white border p-4 rounded-full hover:bg-rose-50 transition-all text-slate-400 hover:text-rose-600"><FaTimes /></button>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-10 bg-slate-100/30">
                             {assetsLoading ? (
-                                <div className="h-full flex flex-col items-center justify-center">
-                                    <FaSpinner className="animate-spin text-3xl text-blue-600" />
-                                </div>
+                                <div className="h-full flex flex-col items-center justify-center"><FaSpinner className="animate-spin text-3xl text-blue-600" /></div>
                             ) : sectionDesigns.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                                     {sectionDesigns.map((design) => (
@@ -740,10 +668,7 @@ export function Admin({ onLogout }) {
                                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{design.image_type}</p>
                                                     <p className="font-bold text-slate-700">Design #{design.id}</p>
                                                 </div>
-                                                <button onClick={() => downloadDesignImage(design.id)}
-                                                    className="bg-slate-900 text-white p-3 rounded-2xl hover:bg-blue-600 transition-all shadow-lg">
-                                                    <FaDownload />
-                                                </button>
+                                                <button onClick={() => downloadDesignImage(design.id)} className="bg-slate-900 text-white p-3 rounded-2xl hover:bg-blue-600 transition-all shadow-lg"><FaDownload /></button>
                                             </div>
                                         </div>
                                     ))}
@@ -764,12 +689,8 @@ export function Admin({ onLogout }) {
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
                         <div className="p-6 border-b flex justify-between items-center bg-slate-50">
-                            <h3 className="text-xl font-black italic text-slate-800">
-                                {isEditMode ? `Edit Profile: ${formData.username}` : "New Member Access"}
-                            </h3>
-                            <button onClick={() => { setIsModalOpen(false); setIsEditMode(false); }} className="text-slate-400 hover:text-slate-600">
-                                <FaTimes />
-                            </button>
+                            <h3 className="text-xl font-black italic text-slate-800">{isEditMode ? `Edit Profile: ${formData.username}` : "New Member Access"}</h3>
+                            <button onClick={() => { setIsModalOpen(false); setIsEditMode(false); }} className="text-slate-400 hover:text-slate-600"><FaTimes /></button>
                         </div>
                         <form onSubmit={handleSubmitAccount} className="p-8 space-y-4">
                             <div className="space-y-1">
@@ -793,9 +714,7 @@ export function Admin({ onLogout }) {
                                     <option value="admin">Super Admin</option>
                                 </select>
                             </div>
-                            <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-200 mt-4 uppercase tracking-widest">
-                                {isEditMode ? "Save Changes" : "Authorize User"}
-                            </button>
+                            <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-200 mt-4 uppercase tracking-widest">{isEditMode ? "Save Changes" : "Authorize User"}</button>
                         </form>
                     </div>
                 </div>
