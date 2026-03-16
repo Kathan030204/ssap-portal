@@ -446,10 +446,10 @@ export function Designer({ onLogout }) {
           </header>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-            <StatCard label="My Tasks" val={stats.total} icon={<FaLayerGroup />} color="text-slate-400" />
-            <StatCard label="QA Passed" val={stats.passed} icon={<FaCheckCircle />} color="text-indigo-500" />
-            <StatCard label="Rejected" val={stats.rejected} icon={<FaExclamationTriangle />} color="text-rose-500" />
-            <StatCard label="Published" val={stats.published} icon={<FaRocket />} color="text-emerald-500" />
+            <StatCard label="My Tasks" val={stats.total} icon={<FaLayerGroup className='text-slate-600' />} color="text-slate-400" />
+            <StatCard label="QA Passed" val={stats.passed} icon={<FaCheckCircle className='text-indigo-500' />} color="text-indigo-500" />
+            <StatCard label="Rejected" val={stats.rejected} icon={<FaExclamationTriangle className='text-rose-500' />} color="text-rose-500" />
+            <StatCard label="Published" val={stats.published} icon={<FaRocket className='text-emerald-400' />} color="text-emerald-500" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -507,13 +507,13 @@ export function Designer({ onLogout }) {
                         </span>
                       </div>
                       <div className="flex gap-8 border-l border-slate-100 pl-8">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-xs font-medium uppercase text-slate-400">Preview</span>
-                          {section.live_link ? <a href={section.live_link} target="_blank" className="text-xs font-bold text-indigo-600 hover:underline truncate w-32">{section.live_link}</a> : <span className="text-xs font-bold text-slate-300">N/A</span>}
+                        <div className="flex flex-col gap-2">
+                          <span className="text-xs font-medium uppercase text-slate-500">Preview</span>
+                          {section.live_link ? <a href={section.live_link} target="_blank" className="text-xs font-bold tracking-wide text-indigo-600 hover:underline w-50">{section.live_link}</a> : <span className="text-xs font-bold text-slate-300">N/A</span>}
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <span className="text-xs font-medium uppercase text-slate-400">Admin</span>
-                          {section.shopify_admin_link ? <a href={section.shopify_admin_link} target="_blank" className="text-xs font-bold text-emerald-600 hover:underline truncate w-32">{section.shopify_admin_link}</a> : <span className="text-xs font-bold text-slate-300">N/A</span>}
+                        <div className="flex flex-col gap-2">
+                          <span className="text-xs font-medium uppercase text-slate-500">Admin</span>
+                          {section.shopify_admin_link ? <a href={section.shopify_admin_link} target="_blank" className="text-xs font-bold tracking-wide text-emerald-600 hover:underline w-50">{section.shopify_admin_link}</a> : <span className="text-xs font-bold text-slate-300">N/A</span>}
                         </div>
                       </div>
                     </div>
