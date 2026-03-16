@@ -501,18 +501,18 @@ export function Designer({ onLogout }) {
                         <FaImage size={20} />
                       </div>
                       <div className="max-w-50">
-                        <h3 className="font-black text-slate-900 text-lg leading-tight mb-2 truncate" title={section.title}>{section.title}</h3>
-                        <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${getStatusClasses(section.current_status)}`}>
+                        <h3 className="font-bold text-slate-900 text-lg leading-tight mb-2" title={section.title}>{section.title}</h3>
+                        <span className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest ${getStatusClasses(section.current_status)}`}>
                           {section.current_status}
                         </span>
                       </div>
                       <div className="flex gap-8 border-l border-slate-100 pl-8">
                         <div className="flex flex-col gap-1">
-                          <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Preview</span>
+                          <span className="text-xs font-medium uppercase text-slate-400">Preview</span>
                           {section.live_link ? <a href={section.live_link} target="_blank" className="text-xs font-bold text-indigo-600 hover:underline truncate w-32">{section.live_link}</a> : <span className="text-xs font-bold text-slate-300">N/A</span>}
                         </div>
                         <div className="flex flex-col gap-1">
-                          <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Admin</span>
+                          <span className="text-xs font-medium uppercase text-slate-400">Admin</span>
                           {section.shopify_admin_link ? <a href={section.shopify_admin_link} target="_blank" className="text-xs font-bold text-emerald-600 hover:underline truncate w-32">{section.shopify_admin_link}</a> : <span className="text-xs font-bold text-slate-300">N/A</span>}
                         </div>
                       </div>
@@ -564,9 +564,9 @@ export function Designer({ onLogout }) {
                           </label>
                           <div className="flex flex-wrap gap-2 mt-2">
                             {pendingAssets[asset.id].map((file, idx) => (
-                              <div key={idx} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg text-[10px] font-bold">
-                                <span className="truncate max-w-20">{file.name}</span>
-                                <button onClick={() => removeFile(asset.id, idx)} className="text-rose-400 hover:text-rose-600 cursor-pointer"><FaTimes size={10} /></button>
+                              <div key={idx} className="flex items-center gap-6 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg text-[10px] font-bold">
+                                <span className="text-sm max-w-20">{file.name}</span>
+                                <button onClick={() => removeFile(asset.id, idx)} className="text-rose-400 hover:text-rose-600 cursor-pointer"><FaTimes size={12} /></button>
                               </div>
                             ))}
                           </div>

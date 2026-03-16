@@ -511,10 +511,10 @@ export function Admin({ onLogout }) {
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-900 text-[10px] uppercase font-black text-slate-400">
                                             <tr>
-                                                <th className="px-6 py-4">Asset ID</th>
-                                                <th className="px-6 py-4">Title</th>
-                                                <th className="px-6 py-4">Status</th>
-                                                <th className="px-6 py-4 text-right">Actions</th>
+                                                <th className="px-6 py-4 text-sm">Asset ID</th>
+                                                <th className="px-6 py-4 text-sm">Title</th>
+                                                <th className="px-6 py-4 text-sm">Status</th>
+                                                <th className="px-6 py-4 text-sm text-right">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
