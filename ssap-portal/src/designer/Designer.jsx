@@ -389,7 +389,7 @@ export function Designer({ onLogout }) {
           </button>
           <button onClick={() => { setViewFilter('passed'); setSelectedSectionId(null); setSearchTerm(''); }}
             className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all cursor-pointer ${viewFilter === 'passed' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
-            <FaCheckCircle /> QA Passed
+            <FaCheckCircle /> QA Passed {stats.passed > 0 && `(${stats.passed})`}
           </button>
           <div className="pt-4 mt-4 border-t border-slate-800">
             <button onClick={() => { setViewFilter('ready'); setSelectedSectionId(null); setSearchTerm(''); }}
