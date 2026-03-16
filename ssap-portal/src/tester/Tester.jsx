@@ -31,7 +31,7 @@ export function Tester({ onLogout }) {
 
   const [issueTypes, setIssueTypes] = useState(() => {
     const saved = localStorage.getItem('tester_custom_issue_types');
-    return saved ? JSON.parse(saved) :null;
+    return saved ? JSON.parse(saved) : null;
   });
 
   // --- IDENTITY & NOTIFICATIONS ---
@@ -92,9 +92,16 @@ export function Tester({ onLogout }) {
     }
   };
 
+  // UPDATED LOGIC: Only open panel for specific statuses
   const openReview = async (section) => {
-    const finalizedStatuses = ['Published', 'Ready for Store', 'QA Passed', 'Pending Admin'];
-    if (finalizedStatuses.includes(section.current_status)) return;
+    const reviewableStatuses = ['In Testing', 'Issue Logged'];
+    
+    if (!reviewableStatuses.includes(section.current_status)) {
+        // If user clicks a published/passed asset, we close the panel and return
+        setShowReviewPanel(false);
+        setSelectedSection(null);
+        return;
+    }
 
     setSelectedSection(section);
     setShowReviewPanel(true);
@@ -117,7 +124,7 @@ export function Tester({ onLogout }) {
   const removeIssueFromReport = (id) => {
     if (editingIssueId === id) {
       setEditingIssueId(null);
-      setIssueData({ severity: 'Major', desc: '', isCustomType: false});
+      setIssueData({ severity: 'Major', desc: '', isCustomType: false });
     }
     setReportIssues(prev => prev.filter(issue => issue.id !== id));
   };
@@ -139,14 +146,12 @@ export function Tester({ onLogout }) {
 
     if (isDbIssue) {
       try {
-        await api.put(`/sections/${selectedSection.id}`, {
-          issue_id: editingIssueId,
-          current_status: 'Issue Logged',
-          type: finalType,
+        await api.put(`/issues/${editingIssueId}`, {
+          type: finalType || 'General',
           severity: issueData.severity,
-          description: issueData.desc,
-          title: selectedSection.title
+          description: issueData.desc
         });
+
         setEditingIssueId(null);
         setIssueData({ severity: 'Major', desc: '', isCustomType: false });
         fetchSectionHistory(selectedSection.id);
@@ -172,12 +177,11 @@ export function Tester({ onLogout }) {
     try {
       if (newStatus === 'Issue Logged') {
         const promises = reportIssues.map(issue =>
-          api.put(`/sections/${id}`, {
-            current_status: 'Issue Logged',
-            type: issue.type,
+          api.post(`/issues`, {
+            section_id: id,
+            type: issue.type || 'General',
             severity: issue.severity,
-            description: issue.desc,
-            title: selectedSection.title
+            description: issue.desc
           })
         );
         await Promise.all(promises);
@@ -188,12 +192,23 @@ export function Tester({ onLogout }) {
           notes: 'QA Approval'
         });
       }
+
       fetchInitialData();
       setShowReviewPanel(false);
       setSelectedSection(null);
+      setReportIssues([]);
     } catch (err) {
       console.error("Status update failed:", err);
-      alert("Database Sync Failed");
+      alert("Database Sync Failed. Please ensure the new IssuesController routes exist.");
+    }
+  };
+
+  const deleteIssueFromDb = async (issueId) => {
+    try {
+      await api.delete(`/issues/${issueId}`);
+      fetchSectionHistory(selectedSection.id);
+    } catch (err) {
+      console.error("Delete failed:", err);
     }
   };
 
@@ -263,7 +278,6 @@ export function Tester({ onLogout }) {
         <header className="flex justify-between items-center mb-10">
           <h2 className="text-4xl font-black italic">Tester Dashboard</h2>
           <div className="flex items-center gap-4">
-            {/* NOTIFICATIONS */}
             <div className="relative" ref={notifRef}>
               <button onClick={() => setShowNotifDropdown(!showNotifDropdown)} className="p-4 bg-white border border-slate-200 rounded-2xl relative text-slate-400 hover:text-purple-500 transition-all shadow-sm">
                 <FaBell size={20} />
@@ -312,27 +326,32 @@ export function Tester({ onLogout }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {filteredSections.map(item => (
-                    <tr key={item.id} onClick={() => openReview(item)} className={`group transition-all cursor-pointer hover:bg-slate-50 ${selectedSection?.id === item.id ? 'bg-purple-50' : ''}`}>
-                      <td className="px-8 py-6">
-                        <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-purple-600 transition-colors"><FaLayerGroup /></div>
-                          <p className="font-black text-slate-800">{item.title}</p>
-                        </div>
-                      </td>
-                      <td className="py-6">
-                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border uppercase 
-                          ${item.current_status === 'Published' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                            item.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                              'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                          {item.current_status}
-                        </span>
-                      </td>
-                      <td className="px-8 py-6 text-right">
-                        <button onClick={(e) => { e.stopPropagation(); handleDownload(item.id, item.title); }} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"><FaDownload /></button>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredSections.map(item => {
+                    const isReviewable = ['In Testing', 'Issue Logged'].includes(item.current_status);
+                    return (
+                      <tr key={item.id} 
+                          onClick={() => openReview(item)} 
+                          className={`group transition-all ${isReviewable ? 'cursor-pointer hover:bg-slate-50' : 'cursor-default'} ${selectedSection?.id === item.id ? 'bg-purple-50' : ''}`}>
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-purple-600 transition-colors"><FaLayerGroup /></div>
+                            <p className="font-black text-slate-800">{item.title}</p>
+                          </div>
+                        </td>
+                        <td className="py-6">
+                          <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border uppercase 
+                            ${item.current_status === 'Published' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                              item.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                            {item.current_status}
+                          </span>
+                        </td>
+                        <td className="px-8 py-6 text-right">
+                          <button onClick={(e) => { e.stopPropagation(); handleDownload(item.id, item.title); }} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"><FaDownload /></button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -349,7 +368,6 @@ export function Tester({ onLogout }) {
                   <button onClick={() => setShowReviewPanel(false)} className="w-10 h-10 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-900 hover:text-white transition-all"><FaTimes /></button>
                 </div>
 
-                {/* EDIT FORM */}
                 {(editingIssueId || selectedSection.current_status === 'In Testing') && (
                   <div className={`p-6 mb-6 rounded-3xl border ${editingIssueId ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-100'}`}>
                     <div className="grid grid-cols-3 gap-2 mb-4">
@@ -373,7 +391,6 @@ export function Tester({ onLogout }) {
                 )}
 
                 <div className="space-y-6">
-                  {/* LOCAL BATCH (BEFORE DB SUBMISSION) */}
                   {reportIssues.length > 0 && (
                     <div className="space-y-3">
                       <p className="text-[10px] font-black uppercase text-purple-600 tracking-widest">New Batch to Submit</p>
@@ -389,7 +406,6 @@ export function Tester({ onLogout }) {
                     </div>
                   )}
 
-                  {/* HISTORY LIST */}
                   <div className="space-y-4">
                     <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Already Logged Issues</p>
                     <div className="max-h-60 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
@@ -399,18 +415,19 @@ export function Tester({ onLogout }) {
                             <div>
                               <div className="flex gap-2 mb-1">
                                 <span className="text-[8px] bg-rose-100 text-rose-600 px-2 py-0.5 rounded font-black uppercase">{issue.severity}</span>
-                                <span className="text-[8px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-black uppercase">{issue.type}</span>
                               </div>
                               <p className="text-xs font-bold text-slate-700">{issue.description || issue.desc}</p>
                             </div>
-                            <button onClick={() => startEditIssue(issue)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"><FaEdit size={14} /></button>
+                            <div>
+                              <button onClick={() => startEditIssue(issue)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"><FaEdit size={14} /></button>
+                              <button onClick={() => deleteIssueFromDb(issue.id)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"><FaTrashAlt size={14} /></button>
+                            </div>
                           </div>
                         )) : <p className="text-center text-xs text-slate-400 italic">No history found</p>
                       }
                     </div>
                   </div>
 
-                  {/* SUBMISSION BUTTONS */}
                   {selectedSection.current_status === 'In Testing' && (
                     <div className="pt-6 border-t border-slate-100 space-y-3">
                       {reportIssues.length > 0 ? (
@@ -434,7 +451,6 @@ export function Tester({ onLogout }) {
   );
 }
 
-// Helper Components
 function StatusCard({ label, count, icon, color }) {
   return (
     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
