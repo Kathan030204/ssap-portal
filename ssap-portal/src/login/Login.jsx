@@ -104,23 +104,15 @@ export function Login() {
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 mb-2">
             {<FaFingerprint size={24} />}
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            {"Sign in to Portal"}
-          </h1>
+          <div className="text-3xl font-extrabold text-slate-900">
+            Sign in to Portal
+          </div>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
-          <div className="flex flex-wrap justify-center gap-2">
+          <div className="flex flex-row justify-center gap-2">
             {roles.map((role) => (
-              <button
-                key={role.id}
-                type="button"
-                onClick={() => setSelectedChip(role.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all cursor-pointer ${selectedChip === role.id
-                  ? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105'
-                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                  }`}
-              >
+              <button key={role.id}type="button" onClick={() => setSelectedChip(role.id)} className={`flex items-center gap-3 px-3 py-2 rounded-full border text-base font-bold transition-all cursor-pointer ${selectedChip === role.id? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105': 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}>
                 <span className={selectedChip === role.id ? 'text-white' : role.color}>{role.icon}</span>
                 <span className="capitalize">{role.id}</span>
               </button>
