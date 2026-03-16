@@ -33,3 +33,4 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Route for downloading a section file
 Route::get('/sections/{id}/download', [SectionController::class, 'download']);
+Route::get('/design/{id}/download', [DesignController::class, 'download']);

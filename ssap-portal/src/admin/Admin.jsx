@@ -274,15 +274,47 @@ export function Admin({ onLogout }) {
         }
     };
 
-    const downloadDesignImage = (imageUrl, imageType, designId) => {
-        const link = document.createElement('a');
-        link.href = imageUrl;
-        const fileName = `${imageType.toLowerCase().replace(/\s+/g, '_')}_${designId}.png`;
-        link.setAttribute('download', fileName);
-        link.setAttribute('target', '_blank');
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+    const downloadDesignImage = async (designId) => {
+        try {
+            const response = await api.get(`/design/${designId}/download`, {
+                responseType: 'blob'
+            });
+
+            // 1. Create the Blob
+            const blob = new Blob([response.data], {
+                type: response.headers['content-type'] || 'image/jpeg'
+            });
+            const url = window.URL.createObjectURL(blob);
+
+            // 2. Setup the Link
+            const link = document.createElement('a');
+            link.href = url;
+
+            // 3. Extract Filename
+            const contentDisposition = response.headers['content-disposition'];
+            let fileName = `design_${designId}.jpg`; // Default extension helps
+
+            if (contentDisposition) {
+                const fileNameMatch = contentDisposition.match(/filename="?(.+?)"?$/);
+                if (fileNameMatch && fileNameMatch[1]) fileName = fileNameMatch[1];
+            }
+
+            // --- CRITICAL ORDER CHANGE ---
+            link.setAttribute('download', fileName); // 1st: Set the name
+            document.body.appendChild(link);         // 2nd: Add to DOM
+            link.click();                            // 3rd: Click it
+            // -----------------------------
+
+            // 4. Cleanup
+            setTimeout(() => {
+                link.remove();
+                window.URL.revokeObjectURL(url);
+            }, 100);
+
+        } catch (error) {
+            console.error("Download failed:", error);
+            alert("The original file could not be downloaded.");
+        }
     };
 
     const handleDownload = async (sectionId, title) => {
@@ -291,14 +323,10 @@ export function Admin({ onLogout }) {
 
             // 1. Find the section to get the original filename from the stored URL
             const section = sections.find(s => s.id === sectionId);
-
-            // 2. Extract the original filename (e.g., "hero-banner-v2.png")
-            // If zip_url exists, we take the last part of the path; otherwise, fallback
             const originalFileName = section?.zip_url
                 ? section.zip_url.split('/').pop()
                 : `${title}.zip`;
 
-            // 3. Create the Blob using the content type from the server
             const blob = new Blob([response.data], { type: response.headers['content-type'] });
             const url = window.URL.createObjectURL(blob);
 
@@ -548,18 +576,18 @@ export function Admin({ onLogout }) {
                                                         <td className="px-6 py-4 text-right flex justify-end gap-2">
                                                             {sec.current_status === 'Ready for Store' && (
                                                                 <>
-                                                                    <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="flex items-center gap-2 bg-emerald-600 text-white tracking-wider px-3 py-2 rounded-xl font-black text-xs hover:bg-rose-100 transition-all">
+                                                                    <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="flex items-center gap-2 bg-emerald-600 text-white tracking-wider px-3 py-2 rounded-xl font-black text-xs cursor-pointer">
                                                                         Publish
                                                                     </button>
-                                                                    <button onClick={() => handleRejectAssets(sec.id)} className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 tracking-tight rounded-xl font-black text-xs hover:bg-rose-100 transition-all border border-rose-100">
+                                                                    <button onClick={() => handleRejectAssets(sec.id)} className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 tracking-tight rounded-xl font-black text-xs cursor-pointer">
                                                                         REJECT ASSETS
                                                                     </button>
                                                                 </>
                                                             )}
-                                                            <button onClick={() => openAssetsViewer(sec)} className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-indigo-100 transition-all">
+                                                            <button onClick={() => openAssetsViewer(sec)} className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl font-black text-xs hover:bg-indigo-100 transition-all cursor-pointer">
                                                                 <FaEye /> VIEW ASSETS
                                                             </button>
-                                                            <button onClick={() => handleDownload(sec.id, sec.title)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl">
+                                                            <button onClick={() => handleDownload(sec.id, sec.title)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl cursor-pointer">
                                                                 <FaDownload />
                                                             </button>
                                                         </td>
@@ -668,15 +696,33 @@ export function Admin({ onLogout }) {
             {isAssetsModalOpen && selectedSection && (
                 <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-6">
                     <div className="bg-white rounded-[2.5rem] w-full max-w-6xl h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-white/20">
+
+                        {/* UPDATED HEADER WITH SECTION LINKS */}
                         <div className="p-8 border-b flex justify-between items-center bg-slate-50">
-                            <div>
+                            <div className="flex-1">
                                 <h3 className="text-3xl font-black text-slate-900">{selectedSection.title}</h3>
-                                <p className="text-xs font-black text-blue-600 uppercase tracking-widest mt-1">Design Proofs & Creative Assets</p>
+                                <div className="flex items-center gap-4 mt-2">
+                                    <p className="text-xs font-black text-blue-600 uppercase tracking-widest">Design Proofs & Creative Assets</p>
+
+                                    {/* SECTION SPECIFIC LINKS */}
+                                    <div className="flex gap-3">
+                                        {selectedSection.live_link && (
+                                            <a href={selectedSection.live_link} target="_blank" className="text-[10px] font-bold bg-slate-900 text-white px-3 py-1 rounded-full flex items-center gap-1.5 hover:bg-blue-600 transition-colors"> LIVE PREVIEW
+                                            </a>
+                                        )}
+                                        {selectedSection.shopify_admin_link && (
+                                            <a href={selectedSection.shopify_admin_link} target="_blank" className="text-[10px] font-bold bg-[#95BF47] text-white px-3 py-1 rounded-full flex items-center gap-1.5 hover:opacity-90 transition-opacity">SHOPIFY ADMIN
+                                            </a>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            <button onClick={() => setIsAssetsModalOpen(false)} className="bg-white border p-4 rounded-full hover:bg-rose-50 transition-all text-slate-400 hover:text-rose-600">
+
+                            <button onClick={() => setIsAssetsModalOpen(false)} className="ml-4 bg-white border p-4 rounded-full hover:bg-rose-50 transition-all text-slate-400 hover:text-rose-600">
                                 <FaTimes />
                             </button>
                         </div>
+
                         <div className="flex-1 overflow-y-auto p-10 bg-slate-100/30">
                             {assetsLoading ? (
                                 <div className="h-full flex flex-col items-center justify-center">
@@ -687,15 +733,14 @@ export function Admin({ onLogout }) {
                                     {sectionDesigns.map((design) => (
                                         <div key={design.id} className="group bg-white p-4 rounded-4xl shadow-sm border border-slate-200 hover:shadow-xl transition-all">
                                             <div className="rounded-3xl overflow-hidden bg-slate-200 relative aspect-square flex items-center justify-center">
-                                                <img src={design.image_url} alt={design.image_type} className="max-w-full max-h-full object-contain"
-                                                    onError={(e) => { e.target.src = "https://placehold.co/400?text=Design+Not+Found"; }} />
+                                                <img src={design.image_url} alt={design.image_type} className="max-w-full max-h-full object-contain"/>
                                             </div>
                                             <div className="mt-6 flex justify-between items-center px-2">
                                                 <div>
                                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{design.image_type}</p>
                                                     <p className="font-bold text-slate-700">Design #{design.id}</p>
                                                 </div>
-                                                <button onClick={() => downloadDesignImage(design.image_url, design.image_type, design.id)}
+                                                <button onClick={() => downloadDesignImage(design.id)}
                                                     className="bg-slate-900 text-white p-3 rounded-2xl hover:bg-blue-600 transition-all shadow-lg">
                                                     <FaDownload />
                                                 </button>
