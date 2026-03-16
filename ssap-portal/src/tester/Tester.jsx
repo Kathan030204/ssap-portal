@@ -5,12 +5,46 @@ import {
   FaSpinner, FaLayerGroup, FaHome,
   FaClock, FaCheckDouble, FaExclamationTriangle, FaListUl,
   FaUserCircle, FaBell, FaTrashAlt,
-  FaDownload, FaEdit
+  FaDownload, FaEdit, FaCheck
 } from 'react-icons/fa';
 
-const api = axios.create({
-  baseURL: '/api',
-});
+const api = axios.create({ baseURL: '/api' });
+
+// --- REUSABLE MODAL COMPONENT ---
+function CustomModal({ isOpen, type, title, message, onClose, onConfirm, isConfirm = false }) {
+  if (!isOpen) return null;
+
+  const isError = type === 'error';
+  const isWarning = type === 'warning';
+
+  return (
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-200">
+        <div className={`w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center text-3xl 
+          ${isError ? 'bg-rose-100 text-rose-600' : isWarning ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+          {isError ? <FaExclamationTriangle /> : isWarning ? <FaExclamationTriangle /> : <FaCheck />}
+        </div>
+        <h3 className="text-2xl font-black text-slate-900 mb-2 italic tracking-tight">{title}</h3>
+        <p className="text-slate-500 font-medium mb-8 leading-relaxed text-sm">{message}</p>
+        
+        <div className="flex gap-3">
+          {isConfirm && (
+            <button onClick={onClose} className="flex-1 py-4 rounded-2xl font-black uppercase text-[10px] bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">
+              Cancel
+            </button>
+          )}
+          <button 
+            onClick={onConfirm || onClose} 
+            className={`flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg transition-transform active:scale-95 
+              ${isError || isConfirm ? 'bg-rose-600 shadow-rose-200' : 'bg-slate-900 shadow-slate-200'} text-white`}
+          >
+            {isConfirm ? 'Confirm' : 'Got it!'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function Tester({ onLogout }) {
   // --- UI & DATA STATES ---
@@ -20,6 +54,28 @@ export function Tester({ onLogout }) {
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // --- NEW MODAL STATE ---
+  const [modal, setModal] = useState({ isOpen: false, type: 'success', title: '', message: '', isConfirm: false, onConfirm: null });
+
+  // Helper to trigger modals
+  const showAlert = (title, message, type = 'success') => {
+    setModal({ isOpen: true, type, title, message, isConfirm: false });
+  };
+
+  const showConfirm = (title, message, onConfirmAction) => {
+    setModal({ 
+      isOpen: true, 
+      type: 'warning', 
+      title, 
+      message, 
+      isConfirm: true, 
+      onConfirm: () => {
+        onConfirmAction();
+        setModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
 
   // --- ISSUE REPORT & HISTORY STATES ---
   const [issueData, setIssueData] = useState({ severity: 'Major', desc: '', isCustomType: false });
@@ -57,9 +113,6 @@ export function Tester({ onLogout }) {
       setCurrentUser({ id: savedUser.id, name: savedUser.username || savedUser.name, role: savedUser.role });
 
       const secRes = await api.get('/sections');
-      
-      // --- DESCENDING SORT LOGIC ---
-      // We sort by ID descending (b.id - a.id) so newest items appear first.
       const myData = secRes.data
         .filter(s => s.tester_id === savedUser.id)
         .sort((a, b) => b.id - a.id);
@@ -110,10 +163,7 @@ export function Tester({ onLogout }) {
   const startEditIssue = (issue) => {
     setEditingIssueId(issue.id);
     const description = issue.description || issue.desc || "";
-    setIssueData({
-      severity: issue.severity || 'Major',
-      desc: description,
-    });
+    setIssueData({ severity: issue.severity || 'Major', desc: description });
   };
 
   const removeIssueFromReport = (id) => {
@@ -126,7 +176,6 @@ export function Tester({ onLogout }) {
 
   const handleAction = async () => {
     if (!issueData.desc.trim()) return;
-
     const isDbIssue = issueHistory.find(h => h.id === editingIssueId);
 
     if (isDbIssue) {
@@ -138,8 +187,9 @@ export function Tester({ onLogout }) {
         setEditingIssueId(null);
         setIssueData({ severity: 'Major', desc: '', isCustomType: false });
         fetchSectionHistory(selectedSection.id);
+        showAlert("Success", "Record updated successfully.");
       } catch {
-        alert("Failed to update record.");
+        showAlert("Error", "Failed to update record.", 'error');
       }
     } else {
       if (editingIssueId) {
@@ -165,29 +215,32 @@ export function Tester({ onLogout }) {
           })
         );
         await Promise.all(promises);
+        showAlert("Submitted", "All issues have been logged.");
       } else {
         await api.put(`/sections/${id}`, {
           current_status: 'Pending Admin',
           notes: 'QA Approval'
         });
+        showAlert("Approved", "Asset has been sent for final approval.");
       }
       fetchInitialData();
       setShowReviewPanel(false);
       setSelectedSection(null);
       setReportIssues([]);
     } catch {
-      alert("Status update failed.");
+      showAlert("Error", "Status update failed.", 'error');
     }
   };
 
   const deleteIssueFromDb = async (issueId) => {
-    if (!window.confirm("Delete this logged issue?")) return;
-    try {
-      await api.delete(`/issues/${issueId}`);
-      fetchSectionHistory(selectedSection.id);
-    } catch {
-      alert("Delete failed.");
-    }
+    showConfirm("Delete Issue?", "This will permanently remove the logged issue.", async () => {
+      try {
+        await api.delete(`/issues/${issueId}`);
+        fetchSectionHistory(selectedSection.id);
+      } catch {
+        showAlert("Error", "Delete failed.", 'error');
+      }
+    });
   };
 
   const handleDownload = async (sectionId, title) => {
@@ -204,9 +257,8 @@ export function Tester({ onLogout }) {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error(error);
-      alert("Download failed.");
+    } catch  {
+      showAlert("Error", "Download failed.", 'error');
     }
   };
 
@@ -230,6 +282,13 @@ export function Tester({ onLogout }) {
 
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
+      {/* RENDER THE MODAL AT TOP LEVEL */}
+      <CustomModal 
+        {...modal} 
+        onClose={() => setModal({ ...modal, isOpen: false })} 
+      />
+
+      {/* Sidebar ... (Same as your original code) */}
       <aside className="sticky top-0 flex h-screen w-72 flex-col bg-slate-900 z-20">
         <div className="flex items-center gap-2 p-8 text-2xl font-black italic text-white">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500 text-sm not-italic">QA</div>
@@ -255,6 +314,7 @@ export function Tester({ onLogout }) {
       </aside>
 
       <main className="flex-1 overflow-y-auto p-10">
+        {/* Header and Stats ... (Same as original) */}
         <header className="mb-10 flex items-center justify-between">
           <h2 className="text-4xl font-black italic">Tester Dashboard</h2>
           <div className="flex items-center gap-4">
@@ -352,6 +412,7 @@ export function Tester({ onLogout }) {
               </table>
             </div>
 
+            {/* Review Panel ... (Same as original) */}
             {showReviewPanel && selectedSection && (
               <div className="sticky top-10 h-fit rounded-[2.5rem] border border-slate-200 bg-white p-10 shadow-2xl animate-in fade-in slide-in-from-right-4 duration-300 xl:col-span-5">
                 <div className="mb-8 flex items-center justify-between">
@@ -445,6 +506,7 @@ export function Tester({ onLogout }) {
   );
 }
 
+// Sidebar/Status components (unchanged)
 function StatusCard({ label, count, icon, color }) {
   return (
     <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
