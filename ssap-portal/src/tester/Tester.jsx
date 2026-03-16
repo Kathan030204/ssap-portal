@@ -4,8 +4,8 @@ import {
   FaCheckCircle, FaSearch, FaTimes,
   FaSpinner, FaLayerGroup, FaHome,
   FaClock, FaCheckDouble, FaExclamationTriangle, FaListUl,
-  FaUserCircle, FaBell, FaTrashAlt, FaPlus,
-  FaDownload, FaHistory, FaEdit
+  FaUserCircle, FaBell, FaTrashAlt,
+  FaDownload, FaEdit, FaExternalLinkAlt
 } from 'react-icons/fa';
 
 const api = axios.create({
@@ -24,15 +24,9 @@ export function Tester({ onLogout }) {
   // --- ISSUE REPORT & HISTORY STATES ---
   const [issueData, setIssueData] = useState({ severity: 'Major', desc: '', isCustomType: false });
   const [reportIssues, setReportIssues] = useState([]);
-  const [customTypeText, setCustomTypeText] = useState("");
   const [issueHistory, setIssueHistory] = useState([]);
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
   const [editingIssueId, setEditingIssueId] = useState(null);
-
-  const [issueTypes, setIssueTypes] = useState(() => {
-    const saved = localStorage.getItem('tester_custom_issue_types');
-    return saved ? JSON.parse(saved) : null;
-  });
 
   // --- IDENTITY & NOTIFICATIONS ---
   const [currentUser, setCurrentUser] = useState({ id: null, name: '', role: '' });
@@ -64,6 +58,7 @@ export function Tester({ onLogout }) {
 
       const secRes = await api.get('/sections');
       const myData = secRes.data.filter(s => s.tester_id === savedUser.id);
+
       const pending = myData.filter(s => s.current_status === 'In Testing');
       setNotifications(pending.map(p => ({ id: p.id, text: `Review needed: ${p.title}` })));
       setSections(myData);
@@ -83,26 +78,22 @@ export function Tester({ onLogout }) {
     try {
       const response = await api.get(`/sections/${sectionId}`);
       const data = response.data;
-      const history = Array.isArray(data) ? data : (data.issues || [data]);
+      const history = Array.isArray(data) ? data : (data.issues || []);
       setIssueHistory(history);
-    } catch (err) {
-      console.error("History fetch failed:", err);
+    } catch (error) {
+      console.error("History fetch failed:", error);
     } finally {
       setIsFetchingHistory(false);
     }
   };
 
-  // UPDATED LOGIC: Only open panel for specific statuses
   const openReview = async (section) => {
     const reviewableStatuses = ['In Testing', 'Issue Logged'];
-    
     if (!reviewableStatuses.includes(section.current_status)) {
-        // If user clicks a published/passed asset, we close the panel and return
-        setShowReviewPanel(false);
-        setSelectedSection(null);
-        return;
+      setShowReviewPanel(false);
+      setSelectedSection(null);
+      return;
     }
-
     setSelectedSection(section);
     setShowReviewPanel(true);
     setReportIssues([]);
@@ -114,7 +105,6 @@ export function Tester({ onLogout }) {
   const startEditIssue = (issue) => {
     setEditingIssueId(issue.id);
     const description = issue.description || issue.desc || "";
-
     setIssueData({
       severity: issue.severity || 'Major',
       desc: description,
@@ -132,44 +122,30 @@ export function Tester({ onLogout }) {
   const handleAction = async () => {
     if (!issueData.desc.trim()) return;
 
-    let finalType = issueData.type;
-    if (issueData.isCustomType) {
-      finalType = customTypeText.trim() || 'Custom';
-      if (!issueTypes.includes(finalType)) {
-        const updatedTypes = [...issueTypes, finalType];
-        setIssueTypes(updatedTypes);
-        localStorage.setItem('tester_custom_issue_types', JSON.stringify(updatedTypes));
-      }
-    }
-
     const isDbIssue = issueHistory.find(h => h.id === editingIssueId);
 
     if (isDbIssue) {
       try {
         await api.put(`/issues/${editingIssueId}`, {
-          type: finalType || 'General',
           severity: issueData.severity,
           description: issueData.desc
         });
-
         setEditingIssueId(null);
         setIssueData({ severity: 'Major', desc: '', isCustomType: false });
         fetchSectionHistory(selectedSection.id);
-      } catch (err) {
-        console.error("Update failed:", err);
-        alert("Failed to update database record.");
+      } catch {
+        alert("Failed to update record.");
       }
     } else {
       if (editingIssueId) {
         setReportIssues(reportIssues.map(issue =>
-          issue.id === editingIssueId ? { ...issueData, type: finalType, id: editingIssueId } : issue
+          issue.id === editingIssueId ? { ...issueData, id: editingIssueId } : issue
         ));
         setEditingIssueId(null);
       } else {
-        setReportIssues([...reportIssues, { ...issueData, type: finalType, id: Date.now() }]);
+        setReportIssues([...reportIssues, { ...issueData, id: Date.now() }]);
       }
       setIssueData({ severity: 'Major', desc: '', isCustomType: false });
-      setCustomTypeText("");
     }
   };
 
@@ -179,7 +155,6 @@ export function Tester({ onLogout }) {
         const promises = reportIssues.map(issue =>
           api.post(`/issues`, {
             section_id: id,
-            type: issue.type || 'General',
             severity: issue.severity,
             description: issue.desc
           })
@@ -188,43 +163,59 @@ export function Tester({ onLogout }) {
       } else {
         await api.put(`/sections/${id}`, {
           current_status: 'Pending Admin',
-          description: 'Tester approved.',
           notes: 'QA Approval'
         });
       }
-
       fetchInitialData();
       setShowReviewPanel(false);
       setSelectedSection(null);
       setReportIssues([]);
-    } catch (err) {
-      console.error("Status update failed:", err);
-      alert("Database Sync Failed. Please ensure the new IssuesController routes exist.");
+    } catch {
+      alert("Status update failed.");
     }
   };
 
   const deleteIssueFromDb = async (issueId) => {
+    if (!window.confirm("Delete this logged issue?")) return;
     try {
       await api.delete(`/issues/${issueId}`);
       fetchSectionHistory(selectedSection.id);
-    } catch (err) {
-      console.error("Delete failed:", err);
+    } catch {
+      alert("Delete failed.");
     }
   };
 
   const handleDownload = async (sectionId, title) => {
     try {
       const response = await api.get(`/sections/${sectionId}/download`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+
+      // 1. Find the section to get the original filename from the stored URL
+      const section = sections.find(s => s.id === sectionId);
+
+      // 2. Extract the original filename (e.g., "hero-banner-v2.png")
+      // If zip_url exists, we take the last part of the path; otherwise, fallback
+      const originalFileName = section?.zip_url
+        ? section.zip_url.split('/').pop()
+        : `${title}.zip`;
+
+      // 3. Create the Blob using the content type from the server
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const url = window.URL.createObjectURL(blob);
+
+      // 4. Trigger the download using the EXACT original filename
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${title.replace(/[^a-z0-9]/gi, '_')}.zip`);
+      link.setAttribute('download', originalFileName); // No more .replace() or .toLowerCase()
+
       document.body.appendChild(link);
       link.click();
+
+      // 5. Cleanup
       link.remove();
-    } catch (err) {
-      console.error("Download failed:", err);
-      alert("Download failed.");
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      alert("Download failed.", 'error');
     }
   };
 
@@ -248,106 +239,120 @@ export function Tester({ onLogout }) {
 
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
-      {/* SIDEBAR */}
-      <div className="w-72 bg-slate-900 flex flex-col sticky top-0 h-screen">
-        <div className="p-8 text-white font-black italic text-2xl flex items-center gap-2">
-          <div className="w-8 h-8 bg-purple-500 rounded-lg not-italic flex items-center justify-center text-sm">QA</div>
+      <aside className="sticky top-0 flex h-screen w-72 flex-col bg-slate-900 z-20">
+        <div className="flex items-center gap-2 p-8 text-2xl font-black italic text-white">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500 text-sm not-italic">QA</div>
           TestingHub
         </div>
-        <nav className="flex-1 px-4 space-y-2">
+        <nav className="flex-1 space-y-2 px-4">
           <SidebarItem icon={<FaHome />} label="My Assets" active={activeFilter === 'all'} onClick={() => setActiveFilter('all')} />
           <SidebarItem icon={<FaClock className="text-blue-400" />} label="In Testing" count={stats.pending} active={activeFilter === 'pending'} onClick={() => setActiveFilter('pending')} />
           <SidebarItem icon={<FaExclamationTriangle className="text-rose-400" />} label="Issues Found" count={stats.logged} active={activeFilter === 'logged'} onClick={() => setActiveFilter('logged')} />
           <SidebarItem icon={<FaCheckCircle className="text-cyan-400" />} label="QA Passed" count={stats.qaPassed} active={activeFilter === 'qa_passed'} onClick={() => setActiveFilter('qa_passed')} />
-          <SidebarItem icon={<FaCheckDouble className="text-emerald-400" />} label="Published Section" count={stats.published} active={activeFilter === 'passed'} onClick={() => setActiveFilter('passed')} />
+          <SidebarItem icon={<FaCheckDouble className="text-emerald-400" />} label="Published" count={stats.published} active={activeFilter === 'passed'} onClick={() => setActiveFilter('passed')} />
         </nav>
-        <div className="p-6 border-t border-slate-800">
-          <div className="flex items-center gap-3 mb-4">
+        <div className="border-t border-slate-800 p-6">
+          <div className="mb-4 flex items-center gap-3">
             <FaUserCircle className="text-slate-500" size={30} />
             <div className="overflow-hidden">
-              <p className="text-white text-xs font-black truncate">{currentUser.name}</p>
-              <p className="text-[10px] text-slate-500 uppercase">{currentUser.role}</p>
+              <p className="truncate text-xs font-black text-white">{currentUser.name}</p>
+              <p className="text-[10px] uppercase text-slate-500">{currentUser.role}</p>
             </div>
           </div>
-          <button onClick={onLogout} className="w-full py-3 bg-rose-500/10 text-rose-500 rounded-xl text-[10px] font-black uppercase hover:bg-rose-500 hover:text-white transition-all">Logout</button>
+          <button onClick={onLogout} className="w-full rounded-xl bg-rose-500/10 py-3 text-[10px] font-black uppercase text-rose-500 transition-all hover:bg-rose-500 hover:text-white">Logout</button>
         </div>
-      </div>
+      </aside>
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 p-10 overflow-y-auto">
-        <header className="flex justify-between items-center mb-10">
+      <main className="flex-1 overflow-y-auto p-10">
+        <header className="mb-10 flex items-center justify-between">
           <h2 className="text-4xl font-black italic">Tester Dashboard</h2>
           <div className="flex items-center gap-4">
             <div className="relative" ref={notifRef}>
-              <button onClick={() => setShowNotifDropdown(!showNotifDropdown)} className="p-4 bg-white border border-slate-200 rounded-2xl relative text-slate-400 hover:text-purple-500 transition-all shadow-sm">
+              <button onClick={() => setShowNotifDropdown(!showNotifDropdown)} className="relative rounded-2xl border border-slate-200 bg-white p-4 text-slate-400 shadow-sm transition-all hover:text-purple-500">
                 <FaBell size={20} />
-                {notifications.length > 0 && <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>}
+                {notifications.length > 0 && <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full border-2 border-white bg-rose-500"></span>}
               </button>
               {showNotifDropdown && (
-                <div className="absolute right-0 mt-4 w-72 bg-white border border-slate-100 rounded-3xl shadow-2xl z-50 p-6">
-                  <h4 className="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest">Notifications</h4>
+                <div className="absolute right-0 z-50 mt-4 w-72 rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl">
+                  <h4 className="mb-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Notifications</h4>
                   <div className="space-y-3">
                     {notifications.length > 0 ? notifications.map(n => (
-                      <div key={n.id} className="p-3 bg-slate-50 rounded-xl text-xs font-bold text-slate-600 border border-slate-100 italic">
-                        {n.text}
-                      </div>
-                    )) : <div className="text-xs text-slate-400 italic py-4 text-center">No new updates</div>}
+                      <div key={n.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs font-bold italic text-slate-600">{n.text}</div>
+                    )) : <div className="py-4 text-center text-xs italic text-slate-400">No new updates</div>}
                   </div>
                 </div>
               )}
             </div>
-
             <div className="relative">
               <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input type="text" placeholder="Search my assets..." className="pl-12 pr-6 py-4 bg-white border border-slate-200 rounded-2xl w-80 shadow-sm outline-none focus:ring-2 ring-purple-500/20" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              <input type="text" placeholder="Search my assets..." className="w-80 rounded-2xl border border-slate-200 bg-white py-4 pl-12 pr-6 shadow-sm outline-none ring-purple-500/20 focus:ring-2" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
           </div>
         </header>
 
-        <div className="grid grid-cols-5 gap-4 mb-10">
+        <div className="mb-10 grid grid-cols-5 gap-4">
           <StatusCard label="Total" count={stats.total} icon={<FaListUl />} color="bg-slate-100 text-slate-600" />
           <StatusCard label="Pending" count={stats.pending} icon={<FaClock />} color="bg-blue-50 text-blue-600" />
-          <StatusCard label="Issue Logged" count={stats.logged} icon={<FaExclamationTriangle />} color="bg-rose-50 text-rose-600" />
+          <StatusCard label="Issues Found" count={stats.logged} icon={<FaExclamationTriangle />} color="bg-rose-50 text-rose-600" />
           <StatusCard label="QA Passed" count={stats.qaPassed} icon={<FaCheckCircle />} color="bg-cyan-50 text-cyan-600" />
           <StatusCard label="Published" count={stats.published} icon={<FaCheckDouble />} color="bg-emerald-50 text-emerald-600" />
         </div>
 
         {loading ? (
-          <div className="py-40 text-center"><FaSpinner className="animate-spin text-purple-600 text-5xl mx-auto" /></div>
+          <div className="py-40 text-center"><FaSpinner className="mx-auto animate-spin text-5xl text-purple-600" /></div>
         ) : (
-          <div className={`grid gap-8 ${showReviewPanel ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
-            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden h-fit">
+          <div className={`grid gap-8 ${showReviewPanel ? 'grid-cols-1 xl:grid-cols-12' : 'grid-cols-1'}`}>
+            <div className={`${showReviewPanel ? 'xl:col-span-7' : 'col-span-1'} h-fit overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-sm`}>
               <table className="w-full text-left">
-                <thead className="bg-slate-50/50 border-b border-slate-100">
+                <thead className="border-b border-slate-100 bg-slate-50/50">
                   <tr>
-                    <th className="px-8 py-5 text-base font-black uppercase tracking-widest text-slate-600">Asset Name</th>
-                    <th className="px-6 py-5 text-base font-black uppercase tracking-widest text-slate-600">Status</th>
-                    <th className="px-8 py-5 text-base font-black uppercase tracking-widest text-slate-600 text-right">Actions</th>
+                    <th className="px-8 py-5 text-[11px] font-black uppercase tracking-widest text-slate-400">Asset</th>
+                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest text-slate-400">Status</th>
+                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest text-slate-400">Preview</th>
+                    <th className="px-6 py-5 text-[11px] font-black uppercase tracking-widest text-slate-400">Admin</th>
+                    <th className="px-8 py-5 text-right text-[11px] font-black uppercase tracking-widest text-slate-400">Pkg</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filteredSections.map(item => {
                     const isReviewable = ['In Testing', 'Issue Logged'].includes(item.current_status);
                     return (
-                      <tr key={item.id} 
-                          onClick={() => openReview(item)} 
-                          className={`group transition-all ${isReviewable ? 'cursor-pointer hover:bg-slate-50' : 'cursor-default'} ${selectedSection?.id === item.id ? 'bg-purple-50' : ''}`}>
+                      <tr key={item.id}
+                        onClick={() => openReview(item)}
+                        className={`group transition-all ${isReviewable ? 'cursor-pointer hover:bg-slate-50' : 'cursor-default'} ${selectedSection?.id === item.id ? 'bg-purple-50' : ''}`}>
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-purple-600 transition-colors"><FaLayerGroup /></div>
-                            <p className="font-black text-slate-800">{item.title}</p>
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-colors group-hover:text-purple-600"><FaLayerGroup /></div>
+                            <div>
+                              <p className="font-black leading-none text-slate-800">{item.title}</p>
+                              <p className="mt-1 text-[9px] font-bold uppercase text-slate-400">ID: {item.id}</p>
+                            </div>
                           </div>
                         </td>
-                        <td className="py-6">
-                          <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border uppercase 
-                            ${item.current_status === 'Published' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                              item.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                                'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                        <td className="px-6 py-6">
+                          <span className={`inline-block whitespace-nowrap rounded-full border px-4 py-1.5 text-[10px] font-black uppercase
+                            ${item.current_status === 'Published' ? 'border-emerald-100 bg-emerald-50 text-emerald-600' :
+                              item.current_status === 'Issue Logged' ? 'border-rose-100 bg-rose-50 text-rose-600' :
+                                'border-blue-100 bg-blue-50 text-blue-600'}`}>
                             {item.current_status}
                           </span>
                         </td>
+                        <td className="px-6 py-6">
+                          {item.live_link ? (
+                            <a href={item.live_link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="group/link flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-purple-600">
+                              <span className="max-w-25 truncate">{item.live_link}</span>
+                            </a>
+                          ) : <span className="text-[10px] font-bold italic text-slate-300">N/A</span>}
+                        </td>
+                        <td className="px-6 py-6">
+                          {item.shopify_admin_link ? (
+                            <a href={item.shopify_admin_link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="group/link flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-purple-600">
+                              <span className="max-w-25 truncate">{item.shopify_admin_link}</span>
+                            </a>
+                          ) : <span className="text-[10px] font-bold italic text-slate-300">N/A</span>}
+                        </td>
                         <td className="px-8 py-6 text-right">
-                          <button onClick={(e) => { e.stopPropagation(); handleDownload(item.id, item.title); }} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"><FaDownload /></button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDownload(item.id, item.title); }} className="rounded-xl p-3 text-blue-600 transition-colors hover:bg-blue-50"><FaDownload /></button>
                         </td>
                       </tr>
                     );
@@ -357,33 +362,33 @@ export function Tester({ onLogout }) {
             </div>
 
             {showReviewPanel && selectedSection && (
-              <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl p-10 h-fit sticky top-10 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="flex justify-between items-center mb-8">
+              <div className="sticky top-10 h-fit rounded-[2.5rem] border border-slate-200 bg-white p-10 shadow-2xl animate-in fade-in slide-in-from-right-4 duration-300 xl:col-span-5">
+                <div className="mb-8 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] font-black uppercase text-purple-500 tracking-widest">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-purple-500">
                       {editingIssueId ? 'Editing Entry' : 'Review Panel'}
                     </span>
                     <h3 className="text-3xl font-black italic">{selectedSection.title}</h3>
                   </div>
-                  <button onClick={() => setShowReviewPanel(false)} className="w-10 h-10 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-900 hover:text-white transition-all"><FaTimes /></button>
+                  <button onClick={() => setShowReviewPanel(false)} className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 transition-all hover:bg-slate-900 hover:text-white"><FaTimes /></button>
                 </div>
 
                 {(editingIssueId || selectedSection.current_status === 'In Testing') && (
-                  <div className={`p-6 mb-6 rounded-3xl border ${editingIssueId ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-100'}`}>
-                    <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className={`mb-6 rounded-3xl border p-6 ${editingIssueId ? 'border-purple-200 bg-purple-50' : 'border-slate-100 bg-slate-50'}`}>
+                    <div className="mb-4 grid grid-cols-3 gap-2">
                       {['Minor', 'Major', 'Critical'].map(sev => (
-                        <button key={sev} onClick={() => setIssueData({ ...issueData, severity: sev })} className={`py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${issueData.severity === sev ? 'bg-rose-600 border-rose-600 text-white' : 'bg-white border-slate-100 text-slate-400'}`}>{sev}</button>
+                        <button key={sev} onClick={() => setIssueData({ ...issueData, severity: sev })} className={`rounded-xl border py-2 text-[10px] font-black uppercase transition-all ${issueData.severity === sev ? 'border-rose-600 bg-rose-600 text-white' : 'border-slate-100 bg-white text-slate-400'}`}>{sev}</button>
                       ))}
                     </div>
                     <textarea
-                      className="w-full p-4 border border-slate-200 rounded-2xl text-sm font-bold h-24 mb-4 outline-none focus:ring-2 ring-purple-500/20"
+                      className="mb-4 h-24 w-full rounded-2xl border border-slate-200 p-4 text-sm font-bold outline-none ring-purple-500/20 focus:ring-2"
                       placeholder="Describe the issue..."
                       value={issueData.desc}
                       onChange={(e) => setIssueData({ ...issueData, desc: e.target.value })}
                     />
                     <div className="flex gap-2">
-                      {editingIssueId && <button onClick={() => { setEditingIssueId(null); setIssueData({ severity: 'Major', desc: '', isCustomType: false }) }} className="flex-1 py-3 bg-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase">Cancel</button>}
-                      <button onClick={handleAction} className="flex-2 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase">
+                      {editingIssueId && <button onClick={() => { setEditingIssueId(null); setIssueData({ severity: 'Major', desc: '', isCustomType: false }) }} className="flex-1 rounded-xl bg-slate-200 py-3 text-[10px] font-black uppercase text-slate-600">Cancel</button>}
+                      <button onClick={handleAction} className="flex-2 rounded-xl bg-slate-900 py-3 text-[10px] font-black uppercase text-white">
                         {editingIssueId ? 'Update Record' : 'Add to Batch'}
                       </button>
                     </div>
@@ -393,13 +398,13 @@ export function Tester({ onLogout }) {
                 <div className="space-y-6">
                   {reportIssues.length > 0 && (
                     <div className="space-y-3">
-                      <p className="text-[10px] font-black uppercase text-purple-600 tracking-widest">New Batch to Submit</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-purple-600">New Batch to Submit</p>
                       {reportIssues.map(issue => (
-                        <div key={issue.id} className="p-4 bg-purple-50 border border-purple-100 rounded-2xl flex justify-between items-center">
-                          <span className="text-xs font-bold text-purple-900">{issue.desc.substring(0, 30)}...</span>
-                          <div className="flex gap-2">
-                            <button onClick={() => startEditIssue(issue)} className="text-blue-500 p-1"><FaEdit /></button>
-                            <button onClick={() => removeIssueFromReport(issue.id)} className="text-rose-500 p-1"><FaTrashAlt /></button>
+                        <div key={issue.id} className="flex items-center justify-between rounded-2xl border border-purple-100 bg-purple-50 p-4">
+                          <span className="truncate pr-4 text-xs font-bold text-purple-900">{issue.desc}</span>
+                          <div className="shrink-0 flex gap-2">
+                            <button onClick={() => startEditIssue(issue)} className="p-1 text-blue-500"><FaEdit /></button>
+                            <button onClick={() => removeIssueFromReport(issue.id)} className="p-1 text-rose-500"><FaTrashAlt /></button>
                           </div>
                         </div>
                       ))}
@@ -407,35 +412,33 @@ export function Tester({ onLogout }) {
                   )}
 
                   <div className="space-y-4">
-                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Already Logged Issues</p>
-                    <div className="max-h-60 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                      {isFetchingHistory ? <FaSpinner className="animate-spin mx-auto text-rose-500" /> :
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Already Logged Issues</p>
+                    <div className="custom-scrollbar max-h-60 space-y-3 overflow-y-auto pr-2">
+                      {isFetchingHistory ? <FaSpinner className="mx-auto animate-spin text-rose-500" /> :
                         issueHistory.length > 0 ? issueHistory.map((issue) => (
-                          <div key={issue.id} className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm flex justify-between items-start">
-                            <div>
-                              <div className="flex gap-2 mb-1">
-                                <span className="text-[8px] bg-rose-100 text-rose-600 px-2 py-0.5 rounded font-black uppercase">{issue.severity}</span>
-                              </div>
-                              <p className="text-xs font-bold text-slate-700">{issue.description || issue.desc}</p>
+                          <div key={issue.id} className="flex items-start justify-between rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                            <div className="flex-1 pr-4">
+                              <span className="mb-2 inline-block rounded bg-rose-100 px-2 py-0.5 text-[8px] font-black uppercase text-rose-600">{issue.severity}</span>
+                              <p className="text-xs font-bold leading-relaxed text-slate-700">{issue.description || issue.desc}</p>
                             </div>
-                            <div>
-                              <button onClick={() => startEditIssue(issue)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"><FaEdit size={14} /></button>
-                              <button onClick={() => deleteIssueFromDb(issue.id)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"><FaTrashAlt size={14} /></button>
+                            <div className="flex flex-col gap-1">
+                              <button onClick={() => startEditIssue(issue)} className="rounded-lg p-2 text-blue-500 transition-all hover:bg-blue-50"><FaEdit size={14} /></button>
+                              <button onClick={() => deleteIssueFromDb(issue.id)} className="rounded-lg p-2 text-rose-500 transition-all hover:bg-rose-50"><FaTrashAlt size={14} /></button>
                             </div>
                           </div>
-                        )) : <p className="text-center text-xs text-slate-400 italic">No history found</p>
+                        )) : <p className="py-10 text-center text-xs italic text-slate-400">No history found</p>
                       }
                     </div>
                   </div>
 
                   {selectedSection.current_status === 'In Testing' && (
-                    <div className="pt-6 border-t border-slate-100 space-y-3">
+                    <div className="space-y-3 border-t border-slate-100 pt-6">
                       {reportIssues.length > 0 ? (
-                        <button onClick={() => handleUpdateStatus(selectedSection.id, 'Issue Logged')} className="w-full py-5 bg-rose-600 text-white rounded-3xl font-black uppercase italic tracking-widest shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all">
+                        <button onClick={() => handleUpdateStatus(selectedSection.id, 'Issue Logged')} className="w-full rounded-3xl bg-rose-600 py-5 text-[11px] font-black uppercase italic tracking-widest text-white shadow-lg shadow-rose-200 transition-all hover:bg-rose-700">
                           Submit Batch ({reportIssues.length})
                         </button>
                       ) : (
-                        <button onClick={() => handleUpdateStatus(selectedSection.id, 'QA Passed')} className="w-full py-5 bg-emerald-500 text-white rounded-3xl font-black uppercase italic tracking-widest shadow-lg shadow-emerald-200 hover:bg-emerald-600 transition-all">
+                        <button onClick={() => handleUpdateStatus(selectedSection.id, 'QA Passed')} className="w-full rounded-3xl bg-emerald-500 py-5 text-[11px] font-black uppercase italic tracking-widest text-white shadow-lg shadow-emerald-200 transition-all hover:bg-emerald-600">
                           Approve Section
                         </button>
                       )}
@@ -446,28 +449,28 @@ export function Tester({ onLogout }) {
             )}
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
 
 function StatusCard({ label, count, icon, color }) {
   return (
-    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+    <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <div>
-        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{label}</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
         <p className="text-3xl font-black text-slate-900">{count}</p>
       </div>
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${color}`}>{icon}</div>
+      <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-xl ${color}`}>{icon}</div>
     </div>
   );
 }
 
 function SidebarItem({ icon, label, active, onClick, count }) {
   return (
-    <button onClick={onClick} className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all ${active ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-800/50'}`}>
-      <div className="flex items-center gap-3 font-bold text-sm uppercase tracking-tight">{icon} {label}</div>
-      {count !== undefined && <span className="text-[10px] font-black bg-slate-900 px-2 py-1 rounded-lg border border-slate-700">{count}</span>}
+    <button onClick={onClick} className={`flex w-full items-center justify-between rounded-2xl px-5 py-4 transition-all ${active ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-800/50'}`}>
+      <div className="flex items-center gap-3 text-sm font-bold uppercase tracking-tight">{icon} {label}</div>
+      {count !== undefined && <span className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] font-black">{count}</span>}
     </button>
   );
 }

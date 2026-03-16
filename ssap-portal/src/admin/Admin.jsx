@@ -288,19 +288,35 @@ export function Admin({ onLogout }) {
     const handleDownload = async (sectionId, title) => {
         try {
             const response = await api.get(`/sections/${sectionId}/download`, { responseType: 'blob' });
+
+            // 1. Find the section to get the original filename from the stored URL
             const section = sections.find(s => s.id === sectionId);
-            const originalFileName = section?.zip_url ? section.zip_url.split('/').pop() : 'file.zip';
-            const extension = originalFileName.split('.').pop();
+
+            // 2. Extract the original filename (e.g., "hero-banner-v2.png")
+            // If zip_url exists, we take the last part of the path; otherwise, fallback
+            const originalFileName = section?.zip_url
+                ? section.zip_url.split('/').pop()
+                : `${title}.zip`;
+
+            // 3. Create the Blob using the content type from the server
             const blob = new Blob([response.data], { type: response.headers['content-type'] });
             const url = window.URL.createObjectURL(blob);
+
+            // 4. Trigger the download using the EXACT original filename
             const link = document.createElement('a');
             link.href = url;
-            const cleanTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            link.setAttribute('download', `${cleanTitle}.${extension}`);
+            link.setAttribute('download', originalFileName); // No more .replace() or .toLowerCase()
+
             document.body.appendChild(link);
             link.click();
+
+            // 5. Cleanup
             link.remove();
-        } catch { showAlert("Download failed.", 'error'); }
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error(error);
+            showAlert("Download failed.", 'error');
+        }
     };
 
     const handleLogout = () => {

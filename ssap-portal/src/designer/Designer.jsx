@@ -348,15 +348,34 @@ export function Designer({ onLogout }) {
   const handleDownload = async (sectionId, title) => {
     try {
       const response = await api.get(`/sections/${sectionId}/download`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+
+      // 1. Find the section to get the original filename from the stored URL
+      const section = sections.find(s => s.id === sectionId);
+
+      // 2. Extract the original filename (e.g., "hero-banner-v2.png")
+      // If zip_url exists, we take the last part of the path; otherwise, fallback
+      const originalFileName = section?.zip_url
+        ? section.zip_url.split('/').pop()
+        : `${title}.zip`;
+
+      // 3. Create the Blob using the content type from the server
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const url = window.URL.createObjectURL(blob);
+
+      // 4. Trigger the download using the EXACT original filename
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${title.replace(/\s+/g, '_').toLowerCase()}.zip`);
+      link.setAttribute('download', originalFileName); // No more .replace() or .toLowerCase()
+
       document.body.appendChild(link);
       link.click();
+
+      // 5. Cleanup
       link.remove();
-    } catch {
-      showAlert('error', 'Download Error', 'Could not retrieve the zip package.');
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      showAlert("Download failed.", 'error');
     }
   };
 
@@ -472,27 +491,71 @@ export function Designer({ onLogout }) {
                 <div className="p-20 text-center bg-white rounded-4xl border-2 border-dashed border-slate-200 text-slate-400 font-bold italic">No records found for this view.</div>
               ) : (
                 displaySections.map((section) => (
-                  <div key={section.id}
-                    // UPDATED: Clicking the card only triggers selection IF NOT in "Ready for Store"
+                  <div
+                    key={section.id}
+                    // Clicking the card only triggers selection IF NOT in "Ready for Store"
                     onClick={() => viewFilter !== 'ready' && (viewFilter === 'passed' || viewFilter === 'rejected') && setSelectedSectionId(section.id)}
-                    className={`p-6 rounded-3xl border-2 transition-all bg-white flex justify-between items-center ${selectedSectionId === section.id ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-lg' : 'border-transparent shadow-sm'} ${(viewFilter === 'passed' || viewFilter === 'rejected') ? 'cursor-pointer hover:border-slate-300' : ''}`}>
-                    <div className="flex gap-4 items-center">
-                      <div className={`p-4 rounded-2xl ${selectedSectionId === section.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                    className={`p-6 rounded-3xl border-2 transition-all bg-white flex justify-between items-center ${selectedSectionId === section.id ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-lg' : 'border-transparent shadow-sm'
+                      } ${viewFilter === 'passed' || viewFilter === 'rejected' ? 'cursor-pointer hover:border-slate-300' : ''
+                      }`}
+                  >
+                    <div className="flex gap-6 items-center flex-1">
+                      {/* Icon */}
+                      <div className={`p-4 rounded-2xl shrink-0 ${selectedSectionId === section.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
                         <FaImage size={20} />
                       </div>
-                      <div>
-                        <h3 className="font-bold text-lg mb-3">{section.title}</h3>
-                        <span className={`p-1 rounded-xl text-[10px] font-black uppercase tracking-widest ${getStatusClasses(section.current_status)}`}>
+
+                      {/* Title & Status */}
+                      <div className="max-w-50">
+                        <h3 className="font-black text-slate-900 text-lg leading-tight mb-2 truncate" title={section.title}>
+                          {section.title}
+                        </h3>
+                        <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${getStatusClasses(section.current_status)}`}>
                           {section.current_status}
                         </span>
                       </div>
+
+                      {/* --- NEW UPDATED LINKS DESIGN --- */}
+                      <div className="flex gap-8 border-l border-slate-100 pl-8">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Preview Link</span>
+                          {section.live_link ? (
+                            <a
+                              href={section.live_link}
+                              target="_blank"
+                              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors"
+                            >
+                              {section.live_link}
+                            </a>
+                          ) : (
+                            <span className="text-xs font-bold text-slate-300">N/A</span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Admin Link</span>
+                          {section.shopify_admin_link ? (
+                            <a
+                              href={section.shopify_admin_link}
+                              target="_blank"
+                              className="text-xs font-bold text-emerald-600 hover:text-emerald-800 flex items-center gap-1 transition-colors"
+                            >
+                              {section.shopify_admin_link}
+                            </a>
+                          ) : (
+                            <span className="text-xs font-bold text-slate-300">N/A</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex gap-3 items-center">
-                      {/* ACTION BUTTONS */}
+
+                    {/* Right Side Actions */}
+                    <div className="flex gap-3 items-center ml-4">
                       {section.current_status === 'Ready for Store' && viewFilter === 'ready' && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setSelectedSectionId(section.id); }}
-                          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors shadow-md"
+                          className="flex items-center justify-center w-10 h-10 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl transition-all shadow-md active:scale-95"
+                          title="Add Assets"
                         >
                           <FaPlus size={14} />
                         </button>
@@ -501,16 +564,19 @@ export function Designer({ onLogout }) {
                       {(section.current_status === 'Ready for Store' || section.current_status === 'Published') && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleViewAssets(section); }}
-                          className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors border border-emerald-100"
+                          className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
                         >
-                          <FaEye size={14} />
+                          <FaEye size={14} /> View
                         </button>
                       )}
 
-                      <button onClick={(e) => { e.stopPropagation(); handleDownload(section.id, section.title) }} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDownload(section.id, section.title) }}
+                        className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                        title="Download ZIP"
+                      >
                         <FaDownload />
                       </button>
-
                     </div>
                   </div>
                 ))

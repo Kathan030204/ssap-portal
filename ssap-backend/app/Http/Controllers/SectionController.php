@@ -19,9 +19,7 @@ class SectionController extends Controller
         $request->validate([
             'title'      => 'required|string|max:255',
             'creator_id' => 'required',
-            'zip_file'   => 'required|file|extensions:zip,jpg,jpeg,png,liquid', 
-            'live_link' => 'required|url',
-            'shopify_admin_link' => 'required|url',
+            'zip_file'   => 'required|file|extensions:zip,jpg,jpeg,png,liquid',
         ], [
             'zip_file.extensions' => 'The file must be a zip, rar, image, or a .liquid file.'
         ],
@@ -41,6 +39,9 @@ class SectionController extends Controller
             'creator_id'     => $request->creator_id,
             'current_status' => $request->current_status ?? 'In Testing',
             'zip_url'        => $path, 
+            // Force a default string if the request is empty
+            'live_link' => $request->live_link, 
+            'shopify_admin_link' => $request->shopify_admin_link
         ]);
 
         return response()->json([

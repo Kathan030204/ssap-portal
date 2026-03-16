@@ -92,7 +92,13 @@ export function Creator({ onLogout }) {
   const startReupload = (sec) => {
     setIsEditing(sec.id);
     setSelectedIssue(null);
-    setFormData({ title: sec.title, live_link: sec.live_link || '', shopify_admin_link: sec.shopify_admin_link || '', category: sec.category || 'Hero', docs: sec.docs || '' });
+    setFormData({
+      title: sec.title,
+      live_link: sec.live_link || '',
+      shopify_admin_link: sec.shopify_admin_link || '',
+      category: sec.category || 'Hero',
+      docs: sec.docs || ''
+    });
     setActiveTab('submit');
   };
 
@@ -103,27 +109,38 @@ export function Creator({ onLogout }) {
     data.append('title', formData.title);
     data.append('category', formData.category);
     data.append('docs', formData.docs);
-    data.append('live_link', formData.live_link);       // Append Live Link
-    data.append('shopify_admin_link', formData.shopify_admin_link); // Append Shopify Admin Link
-
-    data.append('current_status', 'Pending Allocation');
+    data.append('live_link', formData.live_link);
+    data.append('shopify_admin_link', formData.shopify_admin_link);
     data.append('creator_id', user.id);
+
     if (file) data.append('zip_file', file);
+
+    /**
+     * LOGIC: 
+     * If isEditing is present, we are fixing a bug. 
+     * We send it to 'In Testing' so it goes directly to the previous tester's queue.
+     * If not editing, it's brand new and goes to 'Pending Allocation' for the Admin.
+     */
+    const nextStatus = isEditing ? 'In Testing' : 'Pending Allocation';
+    data.append('current_status', nextStatus);
 
     try {
       if (isEditing) {
-        data.append('_method', 'PUT');
+        data.append('_method', 'PUT'); // For Laravel/Rails backends that require spoofing
         await api.post(`/sections/${isEditing}`, data);
       } else {
         await api.post('/sections', data);
       }
+
+      // Cleanup
       setFormData({ title: '', category: 'Hero', docs: '', live_link: '', shopify_admin_link: '' });
       setFile(null);
       setIsEditing(null);
       setSelectedIssue(null);
       setActiveTab('inventory');
       fetchSections(user.id);
-    } catch {
+    } catch (err) {
+      console.error(err);
       alert("Submission error.");
     } finally {
       setSubmitting(false);
@@ -133,7 +150,6 @@ export function Creator({ onLogout }) {
   // --- STATS CALCULATION ---
   const stats = {
     total: sections.length,
-    // Combined Review: things waiting for admin + things actively with testers
     review: sections.filter(s => s.current_status === 'Pending Allocation' || s.current_status === 'In Testing').length,
     issues: sections.filter(s => s.current_status === 'Issue Logged').length,
     passed: sections.filter(s => s.current_status === 'Published').length,
@@ -142,7 +158,6 @@ export function Creator({ onLogout }) {
   // --- FILTERING LOGIC ---
   const filteredSections = sections.filter(sec => {
     if (statusFilter === 'All') return true;
-    // Show both Pending and Active testing in the Review tab
     if (statusFilter === 'In Review') {
       return sec.current_status === 'Pending Allocation' || sec.current_status === 'In Testing';
     }
@@ -180,7 +195,7 @@ export function Creator({ onLogout }) {
           ))}
 
           <button
-            onClick={() => { setActiveTab('submit'); setIsEditing(null); setSelectedIssue(null); }}
+            onClick={() => { setActiveTab('submit'); setIsEditing(null); setSelectedIssue(null); setFormData({ title: '', category: 'Hero', docs: '', live_link: '', shopify_admin_link: '' }); }}
             className="mt-4 w-full flex items-center gap-3 px-4 py-3 rounded-xl font-black text-xs uppercase bg-white text-slate-900 hover:bg-indigo-50 transition-all"
           >
             <FaPlus /> New Asset
@@ -246,7 +261,7 @@ export function Creator({ onLogout }) {
                     <tr>
                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Asset Details</th>
                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-center">Lifecycle</th>
-                      <th className="pr-30 py-4 text-[10px] font-black text-slate-400 uppercase text-right">Utility</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-right">Utility</th>
                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-right">View</th>
                     </tr>
                   </thead>
@@ -254,7 +269,6 @@ export function Creator({ onLogout }) {
                     {filteredSections.map(sec => (
                       <tr
                         key={sec.id}
-
                         className={`group hover:bg-slate-50 transition ${statusFilter === 'Fix Required' ? 'cursor-pointer' : 'cursor-default'} ${selectedIssue?.id === sec.id ? 'bg-indigo-50/50' : ''}`}
                       >
                         <td className="px-6 py-5">
@@ -263,26 +277,33 @@ export function Creator({ onLogout }) {
                         </td>
                         <td className="px-6 py-5 text-center">
                           <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border flex items-center justify-center gap-1 w-max mx-auto ${sec.current_status === 'Issue Logged' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                            sec.current_status === 'Pending Allocation' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                              sec.current_status === 'In Testing' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                                'bg-slate-100 text-slate-500'
+                              sec.current_status === 'Pending Allocation' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                sec.current_status === 'In Testing' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                  'bg-slate-100 text-slate-500'
                             }`}>
-                            {sec.current_status === 'Pending Allocation'}
-                            {sec.current_status === 'In Testing'}
                             {sec.current_status}
                           </span>
                         </td>
-                        <td className="px-6 py-5 text-right flex justify-end gap-2 mr-20">
-                          {sec.current_status === 'Issue Logged' && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); startReupload(sec); }}
-                              className="p-2 bg-slate-700 text-white rounded-lg shadow-lg text-[10px] font-bold uppercase cursor-pointer"
-                            >
-                              Fix Issues
-                            </button>
-                          )}
+                        <td className="px-6 py-5 text-right">
+                          <div className="flex justify-end gap-2">
+                            {sec.current_status === 'Issue Logged' && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); startReupload(sec); }}
+                                className="px-3 py-2 bg-slate-700 text-white rounded-lg shadow-lg text-[10px] font-bold uppercase cursor-pointer hover:bg-slate-900 transition-all"
+                              >
+                                Fix Issues
+                              </button>
+                            )}
+                          </div>
                         </td>
-                        <td className="px-6 py-5 text-right"><button onClick={() => {if (statusFilter === 'Fix Required') setSelectedIssue(sec);}} className="p-2 text-slate-400 hover:text-indigo-600 cursor-pointer"><FaEye /></button></td>
+                        <td className="px-6 py-5 text-right">
+                          <button
+                            onClick={() => { if (statusFilter === 'Fix Required') setSelectedIssue(sec); }}
+                            className="p-2 text-slate-400 hover:text-indigo-600 cursor-pointer"
+                          >
+                            <FaEye />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -343,11 +364,13 @@ export function Creator({ onLogout }) {
           /* FORM SECTION */
           <div className="max-w-2xl mx-auto py-10">
             <form onSubmit={handleSubmission} className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl overflow-hidden">
-              <div className={`${isEditing ? 'bg-slate-900' : 'bg-slate-800'} p-10 text-white text-center`}>
+              <div className={`${isEditing ? 'bg-indigo-600' : 'bg-slate-800'} p-10 text-white text-center transition-colors`}>
                 <h2 className="text-3xl font-black italic uppercase tracking-tighter">
                   {isEditing ? 'Revise Section' : 'Add New Section'}
                 </h2>
-                <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Initial status: Pending Admin Allocation</p>
+                <p className="text-[10px] font-bold text-slate-300 mt-2 uppercase tracking-widest">
+                  {isEditing ? `Pushing updates to existing Tester` : 'Initial status: Pending Admin Allocation'}
+                </p>
               </div>
               <div className="p-10 space-y-8">
                 <div>
@@ -357,19 +380,17 @@ export function Creator({ onLogout }) {
                     value={formData.title}
                     disabled={isEditing}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full border-2 border-slate-50 bg-slate-50 rounded-2xl p-5 text-sm font-bold outline-none focus:border-indigo-500"
+                    className="w-full border-2 border-slate-50 bg-slate-50 rounded-2xl p-5 text-sm font-bold outline-none focus:border-indigo-500 disabled:opacity-70"
                     placeholder="e.g. Hero Section V2"
                   />
                 </div>
 
-                {/* NEW LINK FIELDS GRID */}
                 <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-1">Live Page Link</label>
                     <input
                       type="url"
                       value={formData.live_link}
-                      disabled={isEditing}
                       onChange={(e) => setFormData({ ...formData, live_link: e.target.value })}
                       className="w-full border-2 border-slate-50 bg-slate-50 rounded-2xl p-5 text-sm font-bold outline-none focus:border-indigo-500"
                       placeholder="https://example.com/live"
@@ -380,8 +401,7 @@ export function Creator({ onLogout }) {
                     <input
                       type="url"
                       value={formData.shopify_admin_link}
-                      disabled={isEditing}
-                      onChange={(e) => setFormData({ ...formData, shopify_link: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, shopify_admin_link: e.target.value })}
                       className="w-full border-2 border-slate-50 bg-slate-50 rounded-2xl p-5 text-sm font-bold outline-none focus:border-indigo-500"
                       placeholder="https://admin.shopify.com/..."
                     />
@@ -400,7 +420,7 @@ export function Creator({ onLogout }) {
                 <div className="flex justify-end gap-6 pt-4">
                   <button type="button" onClick={() => setActiveTab('inventory')} className="text-xs font-black uppercase text-slate-400">Cancel</button>
                   <button type="submit" disabled={submitting || !file} className="bg-slate-900 text-white px-10 py-4 rounded-xl font-black text-xs uppercase shadow-xl hover:bg-indigo-600 disabled:opacity-50">
-                    {submitting ? 'Transmitting...' : 'Send to QA'}
+                    {submitting ? 'Transmitting...' : isEditing ? 'Push Fix' : 'Send to QA'}
                   </button>
                 </div>
               </div>

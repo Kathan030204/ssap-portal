@@ -11,7 +11,9 @@ class Section extends Model
         'title',
         'creator_id',
         'current_status',
-        'zip_url'
+        'zip_url',
+        'live_link',           // Add this
+        'shopify_admin_link',   // Add this
     ];
 
     public function issues()
