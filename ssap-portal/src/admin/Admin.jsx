@@ -386,8 +386,8 @@ export function Admin({ onLogout }) {
                             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{adminUser.role}</span>
                         </div>
                     </div>
-                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-black text-xs text-rose-400 hover:bg-rose-500/10 transition-all border border-transparent hover:border-rose-500/20 uppercase tracking-widest cursor-pointer">
-                        <FaSignOutAlt /> LOGOUT SESSION
+                    <button onClick={handleLogout} className="w-full test-center gap-3 px-4 py-3 rounded-xl font-black text-xs text-rose-400 hover:bg-rose-500/10 transition-all border border-transparent hover:border-rose-500/20 uppercase tracking-widest cursor-pointer">
+                        LOGOUT SESSION
                     </button>
                 </div>
             </aside>

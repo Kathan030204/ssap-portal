@@ -410,8 +410,8 @@ export function Designer({ onLogout }) {
               <p className="text-slate-500 text-[9px] uppercase font-bold tracking-widest">{currentUser.role}</p>
             </div>
           </div>
-          <button onClick={() => { sessionStorage.clear(); onLogout(); }} className="w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-rose-400 font-black text-xs uppercase tracking-widest">
-            <FaSignOutAlt /> Sign Out
+          <button onClick={() => { sessionStorage.clear(); onLogout(); }} className="w-full cursor-pointertext-center gap-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-rose-400 font-black text-xs uppercase tracking-widest">
+            Sign Out
           </button>
         </div>
       </aside>

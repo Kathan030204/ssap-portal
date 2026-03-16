@@ -30,13 +30,13 @@ export function Creator({ onLogout }) {
     if (!userId) return;
     try {
       const response = await api.get(`/sections?creator_id=${userId}`);
-      
+
       /** * SORTING LOGIC: 
        * We sort the incoming data in descending order based on 'id'.
        * This ensures the newest submissions appear at the top.
        */
       const sortedData = response.data.sort((a, b) => b.id - a.id);
-      
+
       const mySections = sortedData.filter(s => s.creator_id === userId);
       setSections(mySections);
 
@@ -127,7 +127,7 @@ export function Creator({ onLogout }) {
 
     try {
       if (isEditing) {
-        data.append('_method', 'PUT'); 
+        data.append('_method', 'PUT');
         await api.post(`/sections/${isEditing}`, data);
       } else {
         await api.post('/sections', data);
@@ -206,12 +206,12 @@ export function Creator({ onLogout }) {
           <div className="flex items-center gap-3 px-2 mb-4">
             <div className="w-9 h-9 rounded-full bg-indigo-500 flex items-center justify-center text-white font-black text-xs"><FaUserCircle size={20} /></div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-black text-white truncate">{user.name}</p>
-              <p className="text-[9px] font-bold text-slate-500 uppercase">{user.role}</p>
+              <p className="text-sm font-medium uppercase text-white">{user.name}</p>
+              <p className="text-sm font-bold text-slate-500 uppercase">{user.role}</p>
             </div>
           </div>
-          <button onClick={onLogout} className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-rose-400 cursor-pointer">
-            <FaSignOutAlt size={12} /> Sign Out
+          <button onClick={onLogout} className="w-full text-center justify-center gap-2 py-2 text-base font-black uppercase tracking-widest text-slate-500 hover:text-rose-400 cursor-pointer">
+            Sign Out
           </button>
         </div>
       </aside>
