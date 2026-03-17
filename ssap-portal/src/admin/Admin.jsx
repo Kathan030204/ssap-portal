@@ -354,8 +354,8 @@ export function Admin({ onLogout }) {
 
             {/* MOBILE OVERLAY */}
             {isSidebarOpen && (
-                <div 
-                    className="fixed inset-0 bg-slate-900/50 z-90 lg:hidden" 
+                <div
+                    className="fixed inset-0 bg-slate-900/50 z-90 lg:hidden"
                     onClick={() => setIsSidebarOpen(false)}
                 />
             )}
@@ -568,12 +568,51 @@ export function Admin({ onLogout }) {
                                                             </td>
                                                             <td className="px-6 py-4 text-right">
                                                                 <div className="flex justify-end items-center gap-2">
-                                                                    {/* Reassign UI omitted for brevity, matches original logic */}
-                                                                    {sec.current_status === 'Ready for Store' && (
-                                                                        <div className="flex gap-2 mr-2">
-                                                                            <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-3 py-2 rounded-xl font-bold tracking-widest text-xs cursor-pointer">Publish</button>
-                                                                            <button onClick={() => handleRejectAssets(sec.id)} className="bg-rose-50 text-rose-600 px-3 py-2 rounded-xl font-bold text-xs cursor-pointer">REJECT</button>
+                                                                    
+                                                                    {/* REASSIGN TESTER (Visible when In Testing) */}
+                                                                    {sec.current_status === 'In Testing' && (
+                                                                        <div className="flex items-center gap-2 bg-amber-50/50 p-1.5 rounded-xl border border-amber-100">
+                                                                            <select
+                                                                                onChange={(e) => setSelectedTesters({ ...selectedTesters, [sec.id]: e.target.value })}
+                                                                                className="bg-transparent text-[10px] font-black uppercase outline-none cursor-pointer text-amber-700"
+                                                                                defaultValue=""
+                                                                            >
+                                                                                <option value="" disabled>Reassign QA...</option>
+                                                                                {testers.map(t => (
+                                                                                    <option key={t.id} value={t.id}>{t.username} ({getWorkload(t.id)})</option>
+                                                                                ))}
+                                                                            </select>
+                                                                            <button onClick={() => handleAssignTester(sec.id, selectedTesters[sec.id])} disabled={!selectedTesters[sec.id]} className={`p-1.5 rounded-lg cursor-pointer ${selectedTesters[sec.id] ? 'text-amber-600 hover:bg-amber-100' : 'text-slate-300'}`}>
+                                                                                <FaCheck className='text-xs' />
+                                                                            </button>
                                                                         </div>
+                                                                    )}
+
+                                                                    {/* REASSIGN DESIGNER (Visible when In Design or Pending Admin Review) */}
+                                                                    {(sec.current_status === 'In Design' || sec.current_status === 'Pending Admin') && (
+                                                                        <div className="flex items-center gap-2 bg-indigo-50/50 p-1.5 rounded-xl border border-indigo-100">
+                                                                            <select
+                                                                                onChange={(e) => setSelectedDesigners({ ...selectedDesigners, [sec.id]: e.target.value })}
+                                                                                className="bg-transparent text-[10px] font-black uppercase outline-none cursor-pointer text-indigo-700"
+                                                                                defaultValue=""
+                                                                            >
+                                                                                <option value="" disabled>Reassign Design...</option>
+                                                                                {designers.map(d => (
+                                                                                    <option key={d.id} value={d.id}>{d.username} ({getDesignerWorkload(d.id)})</option>
+                                                                                ))}
+                                                                            </select>
+                                                                            <button onClick={() => handleAssignDesigner(sec.id, selectedDesigners[sec.id])} disabled={!selectedDesigners[sec.id]} className={`p-1.5 rounded-lg cursor-pointer ${selectedDesigners[sec.id] ? 'text-indigo-600 hover:bg-indigo-100' : 'text-slate-300'}`}>
+                                                                                <FaCheck className='text-xs' />
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Standard Actions */}
+                                                                    {sec.current_status === 'Ready for Store' && (
+                                                                        <>
+                                                                            <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 text-white px-3 py-2 rounded-xl font-bold tracking-widest text-xs cursor-pointer">Publish</button>
+                                                                            <button onClick={() => handleRejectAssets(sec.id)} className="flex items-center gap-2 bg-rose-50 text-rose-600 px-3 py-2 rounded-xl font-bold text-xs cursor-pointer">REJECT</button>
+                                                                        </>
                                                                     )}
                                                                     <button onClick={() => openAssetsViewer(sec)} className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer" title="View Assets"><FaEye /></button>
                                                                     <button onClick={() => handleDownload(sec.id, sec.title)} className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl cursor-pointer" title="Download ZIP"><FaDownload /></button>
