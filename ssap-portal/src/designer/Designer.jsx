@@ -460,21 +460,12 @@ export function Designer({ onLogout }) {
                 </h1>
 
                 <div className="relative group w-full md:w-80">
-                  <input
-                    type="text"
-                    placeholder="Search by section title..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-12 pr-10 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all shadow-sm"
-                  />
+                  <input type="text" placeholder="Search by section title..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-12 pr-10 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all shadow-sm" />
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors">
                     <FaSearch size={16} />
                   </div>
                   {searchTerm && (
-                    <button
-                      onClick={() => setSearchTerm('')}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-rose-500 transition-colors cursor-pointer"
-                    >
+                    <button onClick={() => setSearchTerm('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-rose-500 transition-colors cursor-pointer" >
                       <FaTimes size={14} />
                     </button>
                   )}
@@ -494,13 +485,11 @@ export function Designer({ onLogout }) {
                     className={`group p-5 rounded-4xl border transition-all duration-300 flex justify-between items-center mb-4 
                       ${selectedSectionId === section.id
                         ? 'bg-white border-indigo-500 shadow-[0_20px_50px_rgba(79,70,229,0.1)] ring-1 ring-indigo-500/20'
-                        : 'bg-white/60 border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200'
-                      } ${viewFilter === 'passed' || viewFilter === 'rejected' ? 'cursor-pointer' : ''}`}
-                  >
+                        : 'bg-white/60 border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200'} ${viewFilter === 'passed' || viewFilter === 'rejected' ? 'cursor-pointer' : ''}`}>
                     <div className="flex gap-6 items-center flex-1">
                       {/* Icon Wrapper */}
                       <div className={`w-14 h-14 rounded-2xl shrink-0 flex items-center justify-center transition-all duration-300
-                    ${selectedSectionId === section.id ? 'bg-indigo-600 text-white rotate-3' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500'}`}>
+                        ${selectedSectionId === section.id ? 'bg-indigo-600 text-white rotate-3' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500'}`}>
                         <FaImage size={22} />
                       </div>
 
