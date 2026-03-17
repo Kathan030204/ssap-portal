@@ -613,21 +613,13 @@ export function Admin({ onLogout }) {
 
                                                                             {(sec.current_status === 'In Design' || sec.current_status === 'Pending Admin') && (
                                                                                 <div className="flex items-center bg-white p-1 rounded-xl border border-indigo-200 shadow-sm ring-4 ring-indigo-50">
-                                                                                    <select
-                                                                                        onChange={(e) => setSelectedDesigners({ ...selectedDesigners, [sec.id]: e.target.value })}
-                                                                                        className="bg-transparent pl-2 text-[10px] font-black uppercase outline-none cursor-pointer text-indigo-700 min-w-28"
-                                                                                        defaultValue=""
-                                                                                    >
+                                                                                    <select onChange={(e) => setSelectedDesigners({ ...selectedDesigners, [sec.id]: e.target.value })} className="bg-transparent pl-2 text-[10px] font-black uppercase outline-none cursor-pointer text-indigo-700 min-w-28" defaultValue="">
                                                                                         <option value="" disabled>Reassign Design</option>
                                                                                         {designers.map(d => (
                                                                                             <option key={d.id} value={d.id}>{d.username} ({getDesignerWorkload(d.id)})</option>
                                                                                         ))}
                                                                                     </select>
-                                                                                    <button
-                                                                                        onClick={() => handleAssignDesigner(sec.id, selectedDesigners[sec.id])}
-                                                                                        disabled={!selectedDesigners[sec.id]}
-                                                                                        className={`ml-1 p-1.5 rounded-lg transition-all ${selectedTesters[sec.id] ? 'bg-indigo-600 text-white hover:scale-105' : 'text-slate-300'}`}
-                                                                                    >
+                                                                                    <button onClick={() => handleAssignDesigner(sec.id, selectedDesigners[sec.id])} disabled={!selectedDesigners[sec.id]} className={`ml-1 p-1.5 rounded-lg transition-all ${selectedTesters[sec.id] ? 'bg-indigo-600 text-white hover:scale-105' : 'text-slate-300'}`}>
                                                                                         <FaCheck className='text-sm text-indigo-600' />
                                                                                     </button>
                                                                                 </div>
@@ -663,11 +655,9 @@ export function Admin({ onLogout }) {
                                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                                             <div className="relative flex items-center">
                                                 <FaSearch className="absolute left-4 text-slate-400 text-sm" />
-                                                <input type="text" placeholder="Search by title..." value={approvalSearch} onChange={(e) => setApprovalSearch(e.target.value)}
-                                                    className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 w-full sm:w-64 shadow-sm cursor-pointer" />
+                                                <input type="text" placeholder="Search by title..." value={approvalSearch} onChange={(e) => setApprovalSearch(e.target.value)} className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 w-full sm:w-64 shadow-sm cursor-pointer" />
                                             </div>
-                                            <select className="bg-white border border-slate-200 px-4 py-2 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 shadow-sm cursor-pointer"
-                                                value={approvalFilter} onChange={(e) => setApprovalFilter(e.target.value)}>
+                                            <select className="bg-white border border-slate-200 px-4 py-2 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 shadow-sm cursor-pointer" value={approvalFilter} onChange={(e) => setApprovalFilter(e.target.value)}>
                                                 <option value="all">All Statuses</option>
                                                 <option value="Ready for Store">Ready for Store</option>
                                                 <option value="Published">Published</option>
