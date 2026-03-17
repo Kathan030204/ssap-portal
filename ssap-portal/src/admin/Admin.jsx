@@ -687,10 +687,10 @@ export function Admin({ onLogout }) {
                                     <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Creative Assets</p>
                                     <div className="flex gap-2">
                                         {selectedSection.live_link && (
-                                            <a href={selectedSection.live_link} target="_blank" rel="noreferrer" className="text-[9px] font-bold bg-slate-900 text-white px-2 py-1 rounded-full hover:bg-blue-600 transition-colors">PREVIEW</a>
+                                            <a href={selectedSection.live_link} target="_blank" rel="noreferrer" className="text-xs tracking-wider font-medium bg-slate-900 text-white px-2 py-1 rounded-full hover:bg-blue-600 transition-colors">PREVIEW LINK</a>
                                         )}
                                         {selectedSection.shopify_admin_link && (
-                                            <a href={selectedSection.shopify_admin_link} target="_blank" rel="noreferrer" className="text-[9px] font-bold bg-[#95BF47] text-white px-2 py-1 rounded-full hover:opacity-90">SHOPIFY</a>
+                                            <a href={selectedSection.shopify_admin_link} target="_blank" rel="noreferrer" className="text-xs tracking-wider font-medium bg-[#95BF47] text-white px-2 py-1 rounded-full hover:opacity-90">SHOPIFY ADMIN LINK</a>
                                         )}
                                     </div>
                                 </div>
