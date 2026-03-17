@@ -386,17 +386,13 @@ export function Admin({ onLogout }) {
                 </nav>
                 <div className="p-4 border-t border-slate-800 bg-slate-900/40">
                     <div className="flex items-center gap-3 px-2 mb-4">
-                        <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 border border-blue-500/30 font-black">
-                            <FaUserCircle size={20} />
-                        </div>
-                        <div className="flex flex-col overflow-hidden">
-                            <span className="font-bold text-base tracking-wider truncate">{adminUser.username}</span>
-                            <span className="text-xs text-slate-500 font-bold uppercase tracking-tighter">{adminUser.role}</span>
-                        </div>
+                        <FaUserCircle className="text-slate-500" size={30} />
+                        <div className="overflow-hidden">
+                <p className="text-base font-bold tracking-wider text-white truncate">{adminUser.username}</p>
+                <p className="text-sm uppercase text-slate-500">{adminUser.role}</p>
+              </div>
                     </div>
-                    <button onClick={handleLogout} className="w-full text-center gap-3 px-4 py-3 rounded-xl font-bold text-xs text-rose-400 hover:bg-rose-500/10 transition-all border border-transparent hover:border-rose-500/20 uppercase tracking-widest cursor-pointer">
-                        LOGOUT SESSION
-                    </button>
+                    <button onClick={handleLogout} className="w-full rounded-xl bg-rose-500/10 py-3 text-[10px] font-black uppercase text-rose-500 transition-all hover:bg-rose-500 hover:text-white cursor-pointer">Logout</button>
                 </div>
             </aside>
 
@@ -832,9 +828,9 @@ export function Admin({ onLogout }) {
 function StatusTile({ label, val, icon }) {
     return (
         <div className="bg-white p-5 md:p-6 rounded-3xl border border-slate-200 shadow-sm transition-transform hover:scale-[1.02]">
-            <p className="text-slate-400 text-[10px] md:text-xs font-black uppercase tracking-wider">{label}</p>
+            <p className="text-slate-500 text-sm md:text-xs font-bold uppercase tracking-wider">{label}</p>
             <div className="flex items-end justify-between mt-1">
-                <span className="text-2xl md:text-3xl font-black text-slate-900 truncate">{val}</span>
+                <span className="text-2xl md:text-3xl font-extrabold text-slate-900 truncate">{val}</span>
                 <div className="text-xl mb-1 shrink-0">{icon}</div>
             </div>
         </div>

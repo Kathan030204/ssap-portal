@@ -4,7 +4,7 @@ import {
   FaPalette, FaImage, FaDesktop, FaMobileAlt,
   FaAd, FaSpinner, FaCloudUploadAlt, FaDownload,
   FaListUl, FaCheckCircle, FaLayerGroup, FaStore, FaRocket,
-  FaUserCircle, FaBell, FaTimes, FaExclamationTriangle, 
+  FaUserCircle, FaBell, FaTimes, FaExclamationTriangle,
   FaCheck, FaEye, FaEdit, FaTrash, FaPlus, FaSearch
 } from 'react-icons/fa';
 
@@ -148,7 +148,7 @@ export function Designer({ onLogout }) {
     try {
       if (!currentUser.id || currentUser.id === 'N/A') return;
       const response = await api.get('/sections');
-      
+
       const myData = response.data
         .filter(s => s.designer_id === currentUser.id)
         .sort((a, b) => b.id - a.id);
@@ -353,7 +353,7 @@ export function Designer({ onLogout }) {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch  {
+    } catch {
       showAlert("Download failed.", 'error');
     }
   };
@@ -404,15 +404,13 @@ export function Designer({ onLogout }) {
         </nav>
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
-            <FaUserCircle size={20} className="text-indigo-400" />
+            <FaUserCircle className="text-slate-500" size={30} />
             <div className="overflow-hidden">
-              <p className="font-bold text-base w-32 tracking-wider">{currentUser.name}</p>
-              <p className="text-slate-500 text-xs uppercase font-bold tracking-widest">{currentUser.role}</p>
+              <p className="text-base font-bold tracking-wider text-white truncate">{currentUser.name}</p>
+              <p className="text-sm uppercase text-slate-500">{currentUser.role}</p>
             </div>
           </div>
-          <button onClick={() => { sessionStorage.clear(); onLogout(); }} className="w-full cursor-pointer text-center gap-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-rose-400 font-bold text-xs uppercase tracking-widest">
-            Sign Out
-          </button>
+          <button onClick={onLogout} className="w-full rounded-xl bg-rose-500/10 py-3 text-[10px] font-black uppercase text-rose-500 transition-all hover:bg-rose-500 hover:text-white cursor-pointer">Logout</button>
         </div>
       </aside>
 
@@ -453,11 +451,11 @@ export function Designer({ onLogout }) {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className={`${showPipeline ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-4 transition-all duration-300`}>
-              
+
               {/* --- HEADER WITH SEARCH BAR --- */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <h1 className="text-2xl font-black capitalize tracking-tight flex items-center gap-3">
-                  <div className={`h-2 w-10 rounded-full ${viewFilter === 'rejected' ? 'bg-rose-600' : viewFilter === 'ready' ? 'bg-emerald-600' : 'bg-indigo-600'}`}></div> 
+                  <div className={`h-2 w-10 rounded-full ${viewFilter === 'rejected' ? 'bg-rose-600' : viewFilter === 'ready' ? 'bg-emerald-600' : 'bg-indigo-600'}`}></div>
                   {viewFilter} Repository
                 </h1>
 
@@ -473,7 +471,7 @@ export function Designer({ onLogout }) {
                     <FaSearch size={16} />
                   </div>
                   {searchTerm && (
-                    <button 
+                    <button
                       onClick={() => setSearchTerm('')}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-rose-500 transition-colors cursor-pointer"
                     >
@@ -589,8 +587,8 @@ export function Designer({ onLogout }) {
 function StatCard({ label, val, icon, color }) {
   return (
     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-      <p className={`text-[10px] font-black uppercase tracking-wider ${color}`}>{label}</p>
-      <div className="flex justify-between items-end mt-1 font-black text-3xl text-slate-900">
+      <p className={`text-sm font-bold uppercase tracking-wider ${color}`}>{label}</p>
+      <div className="flex justify-between items-end mt-1 font-bold text-3xl text-slate-900">
         <span>{val}</span>
         <span className="text-slate-100 text-xl">{icon}</span>
       </div>

@@ -4,7 +4,11 @@ import {
   FaUpload, FaBug, FaCheckCircle,
   FaEye, FaTimes, FaPlus, FaSyncAlt,
   FaFlask, FaHome, FaBoxOpen, FaBell,
-  FaUserCircle, FaBars // Added FaBars for mobile menu
+  FaUserCircle, FaBars, // Added FaBars for mobile menu
+  FaLayerGroup,
+  FaExclamationTriangle,
+  FaRocket,
+  FaClock
 } from 'react-icons/fa';
 
 const api = axios.create({ baseURL: '/api' });
@@ -141,11 +145,11 @@ export function Creator({ onLogout }) {
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-800">
-      
+
       {/* MOBILE OVERLAY */}
       {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/50 z-40 lg:hidden" 
+        <div
+          className="fixed inset-0 bg-slate-900/50 z-40 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -189,15 +193,15 @@ export function Creator({ onLogout }) {
 
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-2 mb-4">
-            <div className="w-9 h-9 rounded-full bg-indigo-500 flex items-center justify-center text-white font-black text-xs"><FaUserCircle size={20} /></div>
+            <FaUserCircle className="text-slate-500" size={30} />
             <div className="flex-1 min-w-0">
-              <span className="text-sm font-medium text-white truncate block">{user.name}</span>
-              <p className="text-[10px] font-bold text-slate-500 uppercase">{user.role}</p>
+              <div className="overflow-hidden">
+                <p className="text-base font-bold tracking-wider text-white truncate">{user.name}</p>
+                <p className="text-sm uppercase text-slate-500">{user.role}</p>
+              </div>
             </div>
           </div>
-          <button onClick={onLogout} className="w-full text-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-rose-400 cursor-pointer">
-            Sign Out
-          </button>
+          <button onClick={onLogout} className="w-full rounded-xl bg-rose-500/10 py-3 text-[10px] font-black uppercase text-rose-500 transition-all hover:bg-rose-500 hover:text-white cursor-pointer">Logout</button>
         </div>
       </aside>
 
@@ -206,7 +210,7 @@ export function Creator({ onLogout }) {
         <header className="mb-10 flex justify-between items-start">
           <div className="flex items-center gap-4">
             {/* Mobile Menu Toggle */}
-            <button 
+            <button
               onClick={() => setIsSidebarOpen(true)}
               className="lg:hidden p-3 bg-white border border-slate-200 rounded-xl text-slate-600"
             >
@@ -243,10 +247,10 @@ export function Creator({ onLogout }) {
             {/* Table Column */}
             <div className={statusFilter === 'Fix Required' ? 'lg:col-span-8 order-2 lg:order-1' : 'col-span-1'}>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <StatBox label="TOTAL" val={stats.total} />
-                <StatBox label="IN REVIEW" val={stats.review} color="text-amber-500" />
-                <StatBox label="ISSUES" val={stats.issues} color="text-rose-500" />
-                <StatBox label="PASSED" val={stats.passed} color="text-emerald-500" />
+                <StatBox label="TOTAL" val={stats.total} icon={<FaLayerGroup className='text-slate-600' />} />
+                <StatBox label="IN REVIEW" val={stats.review} icon={<FaClock className='text-amber-500' />} color="text-amber-500" />
+                <StatBox label="ISSUES" val={stats.issues} icon={<FaExclamationTriangle className='text-rose-500' />} color="text-rose-500" />
+                <StatBox label="PASSED" val={stats.passed} icon={<FaRocket className='text-emerald-400' />} color="text-emerald-500" />
               </div>
 
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -430,11 +434,15 @@ export function Creator({ onLogout }) {
   );
 }
 
-function StatBox({ label, val, color = "text-slate-900" }) {
+function StatBox({ label, val, icon, color }) {
   return (
     <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
-      <p className="text-[10px] font-black text-slate-400 mb-1">{label}</p>
-      <p className={`text-xl md:text-3xl font-black ${color}`}>{val}</p>
+      <p className={`text-sm font-bold text-slate-500 mb-1 ${color}`} >{label}</p>
+      <div className="flex justify-between items-end mt-1 font-bold text-3xl text-slate-900">
+        <span>{val}</span>
+        <span className="text-slate-100 text-xl">{icon}</span>
+      </div>
+
     </div>
   );
 }

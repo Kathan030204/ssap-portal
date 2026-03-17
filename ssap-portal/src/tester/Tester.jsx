@@ -534,8 +534,8 @@ function StatusCard({ label, count, icon, color }) {
   return (
     <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm overflow-hidden">
       <div>
-        <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
-        <p className="text-xl md:text-3xl font-black text-slate-900">{count}</p>
+        <p className="text-xs md:text-xs font-bold uppercase tracking-widest text-slate-500">{label}</p>
+        <p className="text-xl md:text-3xl font-extrabold text-slate-900">{count}</p>
       </div>
       <div className={`flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-2xl text-lg md:text-xl ${color}`}>{icon}</div>
     </div>
