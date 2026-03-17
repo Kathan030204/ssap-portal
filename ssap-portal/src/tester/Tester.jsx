@@ -414,14 +414,14 @@ export function Tester({ onLogout }) {
                               <a href={item.live_link} target="_blank" onClick={(e) => e.stopPropagation()} className="group/link flex items-center gap-2 text-xs font-bold text-purple-500 hover:text-purple-600">
                                 <span className="max-w-25 ">{item.live_link}</span>
                               </a>
-                            ) : <span className="text-[10px] font-bold italic text-slate-300">N/A</span>}
+                            ) : <span className="text-sm font-medium italic text-slate-400">Not Available</span>}
                           </td>
                           <td className="px-6 py-6">
                             {item.shopify_admin_link ? (
                               <a href={item.shopify_admin_link} target="_blank" onClick={(e) => e.stopPropagation()} className="group/link flex items-center gap-2 text-xs font-bold text-green-500 hover:text-green-600">
                                 <span className="max-w-25 ">{item.shopify_admin_link}</span>
                               </a>
-                            ) : <span className="text-[10px] font-bold italic text-slate-300">N/A</span>}
+                            ) : <span className="text-sm font-medium italic text-slate-400">Not Available</span>}
                           </td>
                           <td className="px-8 py-6 text-right">
                             <button onClick={(e) => { e.stopPropagation(); handleDownload(item.id, item.title); }} className="rounded-xl p-3 text-blue-600 transition-colors hover:bg-blue-50 cursor-pointer"><FaDownload /></button>
