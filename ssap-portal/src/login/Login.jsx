@@ -132,7 +132,7 @@ export function Login() {
 
           <div className="space-y-3">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest ml-1">Email Address</label>
               <input 
                 type="email" 
                 placeholder="name@gmail.com" 
@@ -144,7 +144,7 @@ export function Login() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Password</label>
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest ml-1">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
