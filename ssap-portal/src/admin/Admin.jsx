@@ -635,7 +635,7 @@ export function Admin({ onLogout }) {
                                                                         </div>
 
                                                                         {/* Final Actions */}
-                                                                        <div className="flex items-center gap-2 border-l border-slate-100 pl-3">
+                                                                        <div className="flex items-center gap-2 pl-3">
                                                                             {sec.current_status === 'Ready for Store' && (
                                                                                 <>
                                                                                     <button onClick={() => handleStatusUpdate(sec.id, 'Published')} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold tracking-tight text-xs transition-transform active:scale-95 shadow-md shadow-emerald-200/50">Publish</button>
