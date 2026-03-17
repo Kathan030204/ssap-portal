@@ -19,7 +19,7 @@ function AssetViewerModal({ isOpen, assets, onClose, sectionTitle, onEditAsset, 
       <div className="bg-white rounded-4xl shadow-2xl max-w-4xl w-full max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95">
         <div className="p-6 border-b border-slate-100 flex justify-between items-center">
           <div>
-            <h3 className="text-xl font-black text-slate-900 italic uppercase tracking-tight">Stored Assets</h3>
+            <h3 className="text-xl font-bold text-slate-900 italic uppercase tracking-tight">Stored Assets</h3>
             <p className="text-slate-400 text-xs font-bold uppercase">{sectionTitle}</p>
           </div>
           <button onClick={onClose} className="p-3 bg-slate-100 hover:bg-rose-100 hover:text-rose-600 rounded-2xl transition-colors cursor-pointer">
@@ -35,17 +35,17 @@ function AssetViewerModal({ isOpen, assets, onClose, sectionTitle, onEditAsset, 
                 <div key={idx} className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm group relative">
                   <div className="mb-4 rounded-2xl bg-slate-100 h-48 flex items-center justify-center overflow-hidden relative">
                     <img src={asset.image_url} alt={asset.image_type} className="max-w-full max-h-full object-contain" />
-                    <div className="absolute top-2 right-2 bg-slate-900/80 text-white text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest">
+                    <div className="absolute top-2 right-2 bg-slate-900/80 text-white text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-widest">
                       {asset.image_type}
                     </div>
                   </div>
                   <div className="flex justify-between items-center px-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter truncate w-16">#ID: {asset.id}</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter truncate w-16">#ID: {asset.id}</span>
                     <div className="flex gap-2">
-                      <button onClick={() => onEditAsset(asset)} className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer">
+                      <button onClick={() => onEditAsset(asset)} className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer">
                         <FaEdit />
                       </button>
-                      <button onClick={() => onDeleteAsset(asset.id)} className="flex items-center gap-1 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer">
+                      <button onClick={() => onDeleteAsset(asset.id)} className="flex items-center gap-1 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer">
                         <FaTrash />
                       </button>
                     </div>
@@ -70,9 +70,9 @@ function AlertModal({ isOpen, type, title, message, onClose }) {
         <div className={`w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center text-3xl ${isError ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
           {isError ? <FaExclamationTriangle /> : <FaCheck />}
         </div>
-        <h3 className="text-2xl font-black text-slate-900 mb-2 italic">{title}</h3>
+        <h3 className="text-2xl font-bold text-slate-900 mb-2 italic">{title}</h3>
         <p className="text-slate-500 font-medium mb-8 leading-relaxed">{message}</p>
-        <button onClick={onClose} className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-transform active:scale-95 cursor-pointer ${isError ? 'bg-rose-600 shadow-rose-200' : 'bg-slate-900 shadow-slate-200'} text-white`}>
+        <button onClick={onClose} className={`w-full py-4 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-lg transition-transform active:scale-95 cursor-pointer ${isError ? 'bg-rose-600 shadow-rose-200' : 'bg-slate-900 shadow-slate-200'} text-white`}>
           OK!
         </button>
       </div>
@@ -89,11 +89,11 @@ function ConfirmModal({ isOpen, title, message, onConfirm, onCancel }) {
         <div className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center text-3xl bg-amber-100 text-amber-600">
           <FaExclamationTriangle />
         </div>
-        <h3 className="text-2xl font-black text-slate-900 mb-2 italic">{title}</h3>
+        <h3 className="text-2xl font-bold text-slate-900 mb-2 italic">{title}</h3>
         <p className="text-slate-500 font-medium mb-8">{message}</p>
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-4 rounded-2xl font-black uppercase text-xs bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer">Cancel</button>
-          <button onClick={onConfirm} className="flex-1 py-4 rounded-2xl font-black uppercase text-xs bg-rose-600 text-white shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all cursor-pointer">Delete</button>
+          <button onClick={onCancel} className="flex-1 py-4 rounded-2xl font-bold uppercase text-xs bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer">Cancel</button>
+          <button onClick={onConfirm} className="flex-1 py-4 rounded-2xl font-bold uppercase text-xs bg-rose-600 text-white shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all cursor-pointer">Delete</button>
         </div>
       </div>
     </div>
@@ -375,7 +375,7 @@ export function Designer({ onLogout }) {
 
       {/* Sidebar */}
       <aside className="w-64 bg-slate-900 text-white flex flex-col shrink-0 fixed h-full z-20">
-        <div className="p-8 text-xl font-black italic flex items-center gap-3 border-b border-slate-800">
+        <div className="p-8 text-xl font-bold italic flex items-center gap-3 border-b border-slate-800">
           <FaPalette className="text-indigo-400" /> Designer Hub
         </div>
         <nav className="flex-1 px-4 py-6 space-y-1">
@@ -410,7 +410,7 @@ export function Designer({ onLogout }) {
               <p className="text-sm uppercase text-slate-500">{currentUser.role}</p>
             </div>
           </div>
-          <button onClick={onLogout} className="w-full rounded-xl bg-rose-500/10 py-3 text-[10px] font-black uppercase text-rose-500 transition-all hover:bg-rose-500 hover:text-white cursor-pointer">Logout</button>
+          <button onClick={onLogout} className="w-full rounded-xl bg-rose-500/10 py-3 text-[10px] font-bold uppercase text-rose-500 transition-all hover:bg-rose-500 hover:text-white cursor-pointer">Logout</button>
         </div>
       </aside>
 
@@ -419,7 +419,7 @@ export function Designer({ onLogout }) {
         <div className="max-w-7xl mx-auto">
           <header className="flex justify-between items-start mb-10">
             <div>
-              <div className="text-4xl font-black text-slate-900 italic">Studio Pipeline</div>
+              <div className="text-4xl font-bold text-slate-900 italic">Studio Pipeline</div>
             </div>
             <div className="relative" ref={notifRef}>
               <button onClick={() => setShowNotifDropdown(!showNotifDropdown)} className={`p-4  cursor-pointer rounded-2xl bg-white border border-slate-200 text-slate-400 transition-all relative ${notifications.length > 0 ? 'shadow-xl border-indigo-100' : ''}`}>
@@ -428,11 +428,11 @@ export function Designer({ onLogout }) {
               </button>
               {showNotifDropdown && (
                 <div className="absolute right-0 mt-4 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 z-50">
-                  <h4 className="font-black text-[10px] uppercase text-slate-400 mb-4">Urgent Actions</h4>
+                  <h4 className="font-bold text-[10px] uppercase text-slate-400 mb-4">Urgent Actions</h4>
                   <div className="space-y-3 max-h-64 overflow-y-auto">
                     {notifications.map(n => (
                       <div key={n.id} onClick={() => handleNotifClick(n.id, n.status)} className={`p-4 rounded-2xl font-normal border cursor-pointer ${n.status === 'Rejected by Admin' ? 'bg-rose-50 border-rose-100' : 'bg-indigo-50 border-indigo-100'}`}>
-                        <p className="text-xs font-black text-slate-900">{n.title}</p>
+                        <p className="text-xs font-bold text-slate-900">{n.title}</p>
                         <p className="text-[10px] font-bold mt-1 uppercase italic text-slate-500">{n.msg}</p>
                       </div>
                     ))}
@@ -454,7 +454,7 @@ export function Designer({ onLogout }) {
 
               {/* --- HEADER WITH SEARCH BAR --- */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <h1 className="text-2xl font-black capitalize tracking-tight flex items-center gap-3">
+                <h1 className="text-2xl font-bold capitalize tracking-tight flex items-center gap-3">
                   <div className={`h-2 w-10 rounded-full ${viewFilter === 'rejected' ? 'bg-rose-600' : viewFilter === 'ready' ? 'bg-emerald-600' : 'bg-indigo-600'}`}></div>
                   {viewFilter} Repository
                 </h1>
@@ -491,43 +491,79 @@ export function Designer({ onLogout }) {
                   <div
                     key={section.id}
                     onClick={() => viewFilter !== 'ready' && (viewFilter === 'passed' || viewFilter === 'rejected') && setSelectedSectionId(section.id)}
-                    className={`p-6 rounded-3xl border-2 transition-all bg-white flex justify-between items-center ${selectedSectionId === section.id ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-lg' : 'border-transparent shadow-sm'} ${viewFilter === 'passed' || viewFilter === 'rejected' ? 'cursor-pointer hover:border-slate-300' : ''}`}
+                    className={`group p-5 rounded-4xl border transition-all duration-300 flex justify-between items-center mb-4 
+                      ${selectedSectionId === section.id
+                        ? 'bg-white border-indigo-500 shadow-[0_20px_50px_rgba(79,70,229,0.1)] ring-1 ring-indigo-500/20'
+                        : 'bg-white/60 border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200'
+                      } ${viewFilter === 'passed' || viewFilter === 'rejected' ? 'cursor-pointer' : ''}`}
                   >
                     <div className="flex gap-6 items-center flex-1">
-                      <div className={`p-4 rounded-2xl shrink-0 ${selectedSectionId === section.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                        <FaImage size={20} />
+                      {/* Icon Wrapper */}
+                      <div className={`w-14 h-14 rounded-2xl shrink-0 flex items-center justify-center transition-all duration-300
+                    ${selectedSectionId === section.id ? 'bg-indigo-600 text-white rotate-3' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500'}`}>
+                        <FaImage size={22} />
                       </div>
-                      <div className="max-w-50">
-                        <h3 className="font-bold text-slate-900 text-lg leading-tight mb-2" title={section.title}>{section.title}</h3>
-                        <span className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest ${getStatusClasses(section.current_status)}`}>
+
+                      {/* Info Column */}
+                      <div className="max-w-60">
+                        <h3 className="font-bold text-slate-800 text-base leading-tight mb-1.5 truncate" title={section.title}>
+                          {section.title}
+                        </h3>
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tighter border-2 ${getStatusClasses(section.current_status)}`}>
                           {section.current_status}
                         </span>
                       </div>
-                      <div className="flex gap-8 border-l border-slate-100 pl-8">
-                        <div className="flex flex-col gap-2">
-                          <span className="text-xs font-medium uppercase text-slate-500">Preview</span>
-                          {section.live_link ? <a href={section.live_link} target="_blank" className="text-xs font-bold tracking-wide text-indigo-600 hover:underline w-32">{section.live_link}</a> : <span className="text-xs font-bold text-slate-300">N/A</span>}
+
+                      {/* Links Section */}
+                      <div className="hidden md:flex gap-10 border-l border-slate-100 pl-10 ml-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Live Preview</span>
+                          {section.live_link ? (
+                            <a href={section.live_link} target="_blank" className="text-xs font-bold text-indigo-500 hover:text-indigo-700 transition-colors  w-32">
+                              {section.live_link}
+                            </a>
+                          ) : (
+                            <span className="text-xs font-bold text-slate-300 italic">No link</span>
+                          )}
                         </div>
-                        <div className="flex flex-col gap-2">
-                          <span className="text-xs font-medium uppercase text-slate-500">Admin</span>
-                          {section.shopify_admin_link ? <a href={section.shopify_admin_link} target="_blank" className="text-xs font-bold tracking-wide text-emerald-600 hover:underline w-32">{section.shopify_admin_link}</a> : <span className="text-xs font-bold text-slate-300">N/A</span>}
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Admin Path</span>
+                          {section.shopify_admin_link ? (
+                            <a href={section.shopify_admin_link} target="_blank" className="text-xs font-bold text-emerald-500 hover:text-emerald-700 transition-colors  w-32">
+                              {section.shopify_admin_link}
+                            </a>
+                          ) : (
+                            <span className="text-xs font-bold text-slate-300 italic">No link</span>
+                          )}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex gap-3 items-center ml-4">
+                    {/* Actions Section */}
+                    <div className="flex gap-2 items-center ml-6">
                       {section.current_status === 'Ready for Store' && viewFilter === 'ready' && (
-                        <button onClick={(e) => { e.stopPropagation(); setSelectedSectionId(section.id); }} className="flex items-center justify-center w-10 h-10 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer" title="Add Assets">
-                          <FaPlus size={14} />
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedSectionId(section.id); }}
+                          className="flex items-center justify-center w-11 h-11 bg-indigo-600 text-white hover:bg-indigo-700 rounded-2xl transition-all shadow-lg shadow-indigo-200 active:scale-90 cursor-pointer"
+                        >
+                          <FaPlus size={16} />
                         </button>
                       )}
+
                       {(section.current_status === 'Ready for Store' || section.current_status === 'Published' || section.current_status === 'Rejected by Admin') && (
-                        <button onClick={(e) => { e.stopPropagation(); handleViewAssets(section); }} className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm cursor-pointer">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleViewAssets(section); }}
+                          className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white hover:bg-black rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 shadow-sm cursor-pointer"
+                        >
                           <FaEye size={14} /> View
                         </button>
                       )}
-                      <button onClick={(e) => { e.stopPropagation(); handleDownload(section.id, section.title) }} className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer" title="Download ZIP">
-                        <FaDownload />
+
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDownload(section.id, section.title) }}
+                        className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all cursor-pointer group/dl"
+                      >
+                        <FaDownload className="group-hover/dl:-translate-y-0.5 transition-transform" />
                       </button>
                     </div>
                   </div>
@@ -540,13 +576,13 @@ export function Designer({ onLogout }) {
               <div className="lg:col-span-5 animate-in slide-in-from-right duration-300">
                 <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm sticky top-10">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-black text-xl italic flex items-center gap-2"><FaCloudUploadAlt className="text-indigo-600" /> Asset Pipeline</h3>
+                    <h3 className="font-bold text-xl italic flex items-center gap-2"><FaCloudUploadAlt className="text-indigo-600" /> Asset Pipeline</h3>
                     <button onClick={() => setSelectedSectionId(null)} className="p-2 bg-slate-100 text-slate-400 hover:text-rose-500 rounded-full transition-colors cursor-pointer"><FaTimes size={16} /></button>
                   </div>
                   {selectedSection && (
                     <div className="space-y-4">
                       <div className="p-4 bg-slate-50 rounded-2xl mb-4">
-                        <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Target Section</p>
+                        <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Target Section</p>
                         <p className="font-bold text-slate-900 truncate">{selectedSection.title}</p>
                       </div>
                       {[
@@ -556,7 +592,7 @@ export function Designer({ onLogout }) {
                       ].map(asset => (
                         <div key={asset.id}>
                           <label className="group flex flex-col p-4 rounded-2xl border-2 border-dashed border-slate-200 hover:border-indigo-400 cursor-pointer transition-colors bg-white">
-                            <span className="text-[11px] font-black uppercase text-slate-600 flex items-center gap-2">{asset.icon} {asset.label}</span>
+                            <span className="text-[11px] font-bold uppercase text-slate-600 flex items-center gap-2">{asset.icon} {asset.label}</span>
                             <input type="file" multiple className="hidden" onChange={(e) => handleFileSelect(e, asset.id)} />
                           </label>
                           <div className="flex flex-wrap gap-2 mt-2">
@@ -569,7 +605,7 @@ export function Designer({ onLogout }) {
                           </div>
                         </div>
                       ))}
-                      <button onClick={handleFinalSubmit} disabled={loading} className="w-full py-4 rounded-2xl font-black shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white uppercase text-xs transition-all active:scale-95 disabled:bg-slate-200 mt-4 cursor-pointer">
+                      <button onClick={handleFinalSubmit} disabled={loading} className="w-full py-4 rounded-2xl font-bold shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white uppercase text-xs transition-all active:scale-95 disabled:bg-slate-200 mt-4 cursor-pointer">
                         {loading ? <FaSpinner className="animate-spin mx-auto text-lg" /> : 'Add to Store'}
                       </button>
                     </div>
