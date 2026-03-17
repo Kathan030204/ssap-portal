@@ -10,6 +10,28 @@ import {
 
 const api = axios.create({ baseURL: '/api' });
 
+// --- HELPER: DYNAMIC STATUS STYLES ---
+const getStatusStyles = (status) => {
+  switch (status) {
+    case 'Published':
+      return 'border-emerald-100 bg-emerald-50 text-emerald-600';
+    case 'Issue Logged':
+    case 'Rejected by Admin':
+    case 'Critical':
+      return 'border-rose-100 bg-rose-50 text-rose-600';
+    case 'In Testing':
+      return 'border-blue-100 bg-blue-50 text-blue-600';
+    case 'Ready for Store':
+    case 'QA Passed':
+    case 'Pending Admin':
+      return 'border-cyan-100 bg-cyan-50 text-cyan-600';
+    case 'Major':
+      return 'border-amber-100 bg-amber-50 text-amber-600';
+    default:
+      return 'border-slate-100 bg-slate-50 text-slate-500';
+  }
+};
+
 // --- REUSABLE MODAL COMPONENT ---
 function CustomModal({ isOpen, type, title, message, onClose, onConfirm, isConfirm = false }) {
   if (!isOpen) return null;
@@ -51,7 +73,7 @@ export function Tester({ onLogout }) {
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile Sidebar Toggle
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [modal, setModal] = useState({ isOpen: false, type: 'success', title: '', message: '', isConfirm: false, onConfirm: null });
 
@@ -89,7 +111,7 @@ export function Tester({ onLogout }) {
     setSelectedSection(null);
     setEditingIssueId(null);
     setReportIssues([]);
-    setIsSidebarOpen(false); // Close sidebar on filter change (mobile)
+    setIsSidebarOpen(false);
   }, [activeFilter]);
 
   useEffect(() => {
@@ -142,7 +164,7 @@ export function Tester({ onLogout }) {
 
   const openReview = async (section) => {
     const reviewableStatuses = ['In Testing', 'Issue Logged'];
-    if (!reviewableStatuses.includes(section.current_status)) {
+    if (activeFilter === 'all' || !reviewableStatuses.includes(section.current_status)) {
       setShowReviewPanel(false);
       setSelectedSection(null);
       return;
@@ -279,7 +301,7 @@ export function Tester({ onLogout }) {
     <div className="flex min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
       <CustomModal {...modal} onClose={() => setModal({ ...modal, isOpen: false })} />
 
-      {/* Sidebar - Mobile Responsive */}
+      {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 transform bg-slate-900 transition-transform duration-300 lg:sticky lg:top-0 lg:flex lg:h-screen lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between p-8 text-2xl font-black italic text-white">
@@ -309,7 +331,7 @@ export function Tester({ onLogout }) {
         </div>
       </aside>
 
-      {/* Main Content Area */}
+      {/* Main Content */}
       <main className="flex-1 overflow-x-hidden p-4 md:p-10">
         <header className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center justify-between">
@@ -328,7 +350,7 @@ export function Tester({ onLogout }) {
                   <h4 className="mb-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Notifications</h4>
                   <div className="space-y-3">
                     {notifications.length > 0 ? notifications.map(n => (
-                      <div key={n.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs font-bold italic text-slate-600">{n.text}</div>
+                      <div key={n.id} className={`rounded-xl border p-3 text-xs font-bold italic ${getStatusStyles('In Testing')}`}>{n.text}</div>
                     )) : <div className="py-4 text-center text-xs italic text-slate-400">No new updates</div>}
                   </div>
                 </div>
@@ -341,7 +363,7 @@ export function Tester({ onLogout }) {
           </div>
         </header>
 
-        {/* Responsive Stats Grid */}
+        {/* Stats Grid */}
         <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
           <StatusCard label="Total" count={stats.total} icon={<FaListUl />} color="bg-slate-100 text-slate-600" />
           <StatusCard label="Pending" count={stats.pending} icon={<FaClock />} color="bg-blue-50 text-blue-600" />
@@ -354,7 +376,6 @@ export function Tester({ onLogout }) {
           <div className="py-40 text-center"><FaSpinner className="mx-auto animate-spin text-5xl text-purple-600" /></div>
         ) : (
           <div className={`grid gap-8 ${showReviewPanel ? 'grid-cols-1 xl:grid-cols-12' : 'grid-cols-1'}`}>
-            {/* Table Container - overflow-x-auto is key here */}
             <div className={`${showReviewPanel ? 'xl:col-span-7' : 'col-span-1'} h-fit overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-sm`}>
               <div className="overflow-x-auto">
                 <table className="w-full text-left min-w-150">
@@ -369,7 +390,7 @@ export function Tester({ onLogout }) {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {filteredSections.map(item => {
-                      const isReviewable = ['In Testing', 'Issue Logged'].includes(item.current_status);
+                      const isReviewable = activeFilter !== 'all' && ['In Testing', 'Issue Logged'].includes(item.current_status);
                       return (
                         <tr key={item.id}
                           onClick={() => openReview(item)}
@@ -384,24 +405,21 @@ export function Tester({ onLogout }) {
                             </div>
                           </td>
                           <td className="px-6 py-6">
-                            <span className={`inline-block whitespace-nowrap rounded-full border px-4 py-1.5 text-[10px] font-black uppercase
-                              ${item.current_status === 'Published' ? 'border-emerald-100 bg-emerald-50 text-emerald-600' :
-                                item.current_status === 'Issue Logged' ? 'border-rose-100 bg-rose-50 text-rose-600' :
-                                  'border-blue-100 bg-blue-50 text-blue-600'}`}>
+                            <span className={`inline-block whitespace-nowrap rounded-full border px-4 py-1.5 text-[10px] font-black uppercase ${getStatusStyles(item.current_status)}`}>
                               {item.current_status}
                             </span>
                           </td>
                           <td className="px-6 py-6">
                             {item.live_link ? (
                               <a href={item.live_link} target="_blank" onClick={(e) => e.stopPropagation()} className="group/link flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-purple-600">
-                                <span className="max-w-25">{item.live_link}</span>
+                                <span className="max-w-25 ">{item.live_link}</span>
                               </a>
                             ) : <span className="text-[10px] font-bold italic text-slate-300">N/A</span>}
                           </td>
                           <td className="px-6 py-6">
                             {item.shopify_admin_link ? (
                               <a href={item.shopify_admin_link} target="_blank" onClick={(e) => e.stopPropagation()} className="group/link flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-purple-600">
-                                <span className="max-w-25">{item.shopify_admin_link}</span>
+                                <span className="max-w-25 ">{item.shopify_admin_link}</span>
                               </a>
                             ) : <span className="text-[10px] font-bold italic text-slate-300">N/A</span>}
                           </td>
@@ -416,7 +434,7 @@ export function Tester({ onLogout }) {
               </div>
             </div>
 
-            {/* Review Panel - Full width on small, Sidebar on XL */}
+            {/* Review Panel */}
             {showReviewPanel && selectedSection && (
               <div className="sticky top-10 h-fit rounded-[2.5rem] border border-slate-200 bg-white p-6 md:p-10 shadow-2xl animate-in fade-in slide-in-from-right-4 duration-300 xl:col-span-5">
                 <div className="mb-8 flex items-center justify-between">
@@ -469,12 +487,14 @@ export function Tester({ onLogout }) {
 
                   <div className="space-y-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Already Logged Issues</p>
-                    <div className="custom-scrollbar max-h-60 space-y-3 overflow-y-auto pr-2">
+                    <div className="max-h-60 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
                       {isFetchingHistory ? <FaSpinner className="mx-auto animate-spin text-rose-500" /> :
                         issueHistory.length > 0 ? issueHistory.map((issue) => (
                           <div key={issue.id} className="flex items-start justify-between rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
                             <div className="flex-1 pr-4">
-                              <span className="mb-2 inline-block rounded bg-rose-100 px-2 py-0.5 text-[8px] font-black uppercase text-rose-600">{issue.severity}</span>
+                              <span className={`mb-2 inline-block rounded px-2 py-0.5 text-[8px] font-black uppercase border ${getStatusStyles(issue.severity)}`}>
+                                {issue.severity}
+                              </span>
                               <p className="text-xs font-bold leading-relaxed text-slate-700">{issue.description || issue.desc}</p>
                             </div>
                             <div className="flex flex-col gap-1">
@@ -510,7 +530,6 @@ export function Tester({ onLogout }) {
   );
 }
 
-// Sidebar/Status components (Responsive updates)
 function StatusCard({ label, count, icon, color }) {
   return (
     <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm overflow-hidden">
